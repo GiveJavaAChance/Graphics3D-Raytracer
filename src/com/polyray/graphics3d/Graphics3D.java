@@ -837,6 +837,13 @@ public class Graphics3D {
         }
     }
 
+    /**
+     * Draws a framed cube
+     *
+     * @param v the position of the 3DRect
+     * @param size the size of the 3DRect
+     * @param detail The detail of the cube;
+     */
     public void add3DRect(Vector3f v, Vector3f size, int detail) {
         float w = size.x / detail;
         float h = size.y / detail;
@@ -871,7 +878,7 @@ public class Graphics3D {
     public void steve(float x, float y, float z) {
         add3DRect(x, y, z, 5.0f, 10.0f, 2.5f, 1);
         add3DRect(x, y + 10.0f, z, 2.5f, 10.0f, 2.5f, 1);
-        add3DRect(x + 2.0f, y + 10.0f, z, 2.5f, 10.0f, 2.5f, 1);
+        add3DRect(x + 2.5f, y + 10.0f, z, 2.5f, 10.0f, 2.5f, 1);
         add3DRect(x + 5.0f, y, z, 2.5f, 10.0f, 2.5f, 1);
         add3DRect(x - 2.5f, y, z, 2.5f, 10.0f, 2.5f, 1);
         add3DRect(x, y - 5.0f, z - 1.0f, 5.0f, 5.0f, 5.0f, 1);
@@ -881,6 +888,12 @@ public class Graphics3D {
         objects.add(obj);
     }
 
+    
+    /**
+     * Adds all objects
+     * 
+     * @param objects the objects that are going to be added
+     */
     public void addAllObjects(Graphics3DObject[] objects) {
         this.objects.addAll(Arrays.asList(objects));
     }
@@ -1098,6 +1111,8 @@ public class Graphics3D {
             return 0.0f;
         }
     }
+    
+    // Legacy:
 
     /*private Object calcX(float x, float y, float z) {
         float dx = 0.0f, dy, dz = 0.0f;
@@ -1221,6 +1236,7 @@ public class Graphics3D {
             return "err";
         }
     }*/
+    
     private float appRotX(double a, double b, double c, float x, float y, float z, double ang) {
         return (float) (x * Math.cos(ang) + (b * z - c * y) * Math.sin(ang) + a * (a * x + b * y + c * z) * (1.0 - Math.cos(ang)));
     }
@@ -1233,4 +1249,3 @@ public class Graphics3D {
         return (float) (z * Math.cos(ang) + (a * y - b * x) * Math.sin(ang) + c * (a * x + b * y + c * z) * (1.0 - Math.cos(ang)));
     }
 }
-// int boolean double float long char byte short void static public private final synchronized protected abstract if else switch try catch case for while do new super class package import implements throws throw extends return break continue true false this assert default finally instanceof interface native null strictfp transient volatile goto const

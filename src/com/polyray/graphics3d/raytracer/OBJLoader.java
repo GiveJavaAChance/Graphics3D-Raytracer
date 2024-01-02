@@ -20,7 +20,15 @@ public class OBJLoader {
     private final ArrayList<Vector2f> colorPos = new ArrayList<>();
     private final ArrayList<Vector3f> normals = new ArrayList<>();
 
+    /**
+     * Loads a obj file as triangles
+     *
+     * @param file
+     */
     public void loadOBJFile(File file) {
+        if (!file.exists()) {
+            return;
+        }
         try {
             String filePath = file.getAbsolutePath();
             String mtlFilePath = filePath.replace("obj", "mtl");
@@ -99,10 +107,13 @@ public class OBJLoader {
                     Vector2f posA = colorPos.get(aColI);
                     Vector2f posB = colorPos.get(bColI);
                     Vector2f posC = colorPos.get(cColI);
-                    ColorObject cA = ColorObject.toColorObject(new Color(image.getRGB((int) (posA.x * (width - 1.0f)), (int) ((1.0f - posA.y) * (height - 1.0f)))));
-                    ColorObject cB = ColorObject.toColorObject(new Color(image.getRGB((int) (posB.x * (width - 1.0f)), (int) ((1.0f - posB.y) * (height - 1.0f)))));
-                    ColorObject cC = ColorObject.toColorObject(new Color(image.getRGB((int) (posC.x * (width - 1.0f)), (int) ((1.0f - posC.y) * (height - 1.0f)))));
-                    ColorObject triangleCol = ColorObject.add(ColorObject.add(cA, cB), cC).mul(1.0f / 3.0f);
+                    ColorObject triangleCol = new ColorObject(1.0f, 1.0f, 1.0f);
+                    if (image != null) {
+                        ColorObject cA = ColorObject.toColorObject(new Color(image.getRGB((int) (posA.x * (width - 1.0f)), (int) ((1.0f - posA.y) * (height - 1.0f)))));
+                        ColorObject cB = ColorObject.toColorObject(new Color(image.getRGB((int) (posB.x * (width - 1.0f)), (int) ((1.0f - posB.y) * (height - 1.0f)))));
+                        ColorObject cC = ColorObject.toColorObject(new Color(image.getRGB((int) (posC.x * (width - 1.0f)), (int) ((1.0f - posC.y) * (height - 1.0f)))));
+                        triangleCol = ColorObject.add(ColorObject.add(cA, cB), cC).mul(1.0f / 3.0f);
+                    }
                     Triangle t = new Triangle(vertices.get(vAi), vertices.get(vBi), vertices.get(vCi), triangleCol);
                     triangles.add(t);
                     objectTriangles.add(t);
@@ -145,6 +156,9 @@ public class OBJLoader {
     }
 
     public void loadOBJFile(File file, Vector3f translate, float scale) {
+        if (!file.exists()) {
+            return;
+        }
         try {
             String filePath = file.getAbsolutePath();
             String mtlFilePath = filePath.replace("obj", "mtl");
@@ -294,6 +308,10 @@ public class OBJLoader {
         return null;
     }
 
+    /**
+     * Centers the loaded triangles, translating them won't make a difference.
+     * centers by the bounding box, not by the center of mass.
+     */
     public void center() {
         Vector3f ver = vertices.get(0);
         float minX = ver.x, maxX = ver.x, minY = ver.y, maxY = ver.y, minZ = ver.z, maxZ = ver.z;
@@ -331,30 +349,50 @@ public class OBJLoader {
         }
     }
 
+    /**
+     * Retrieve triangles
+     *
+     * @return The loaded triangles
+     */
     public ArrayList<Triangle> get() {
         return triangles;
     }
 
+    /**
+     * @return The amount of triangles loaded
+     */
     public int getSize() {
         return triangles.size();
     }
 
     public ArrayList<Triangle> getObject(int index) {
         if (index < 0 || index >= objects.size()) {
-            String err = "There are only " + objects.size() + " number of objects!";
+            String err = "There are only " + objects.size() + " objects!";
             throw new ArrayIndexOutOfBoundsException(err);
         }
         return objects.get(index);
     }
 
+    /**
+     * @return All object names
+     */
     public ArrayList<String> getObjectNames() {
         return objectNames;
     }
 
+    /**
+     * @return The amount of objects
+     */
     public int getObjectAmount() {
         return objects.size();
     }
 
+    /**
+     * Returns what file format it accepts, could be useful when dealingwith
+     * both OBJ and STL loaders.
+     *
+     * @return The File extension
+     */
     public String getExtension() {
         return "obj";
     }

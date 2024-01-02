@@ -14,6 +14,14 @@ public class STLLoader {
 
     private final ArrayList<Triangle> triangles = new ArrayList<>();
 
+    /**
+     * Loads a stl model as triangles
+     * 
+     * @param filepath The filepath to the stl file.
+     * @param prec Should not be set to anything except 1. It is a niche way of simplifying meshes by just removing triangles.
+     * @param col The color of the triangle.
+     * @param scale The scale of the model, how much it should be scaled. Note: one centimeter in the model corresponds to a value of 100.0f.
+     */
     public void loadSTLFile(String filepath, int prec, ColorObject col, float scale) {
         File file = new File(filepath);
         if (!file.exists()) {
@@ -37,7 +45,7 @@ public class STLLoader {
                     float x = bufferX.getFloat();
                     float y = bufferY.getFloat();
                     float z = bufferZ.getFloat();
-                    Vector3f vertex = new Vector3f(x, z, y);
+                    Vector3f vertex = new Vector3f(x, z, y); // The loaded triangles had flipped z and y so this is correcting that
                     v[j] = vertex;
                 }
                 if (i % prec == 0) {
@@ -53,6 +61,15 @@ public class STLLoader {
         }
     }
 
+    /**
+     * Loads a stl model as triangles
+     * 
+     * @param filepath The filepath to the stl file.
+     * @param prec Should not be set to anything except 1. It is a niche way of simplifying meshes by just removing triangles.
+     * @param col The color of the triangle.
+     * @param translate Translates the model around
+     * @param scale The scale of the model, how much it should be scaled. Note: one centimeter in the model corresponds to a value of 100.0f.
+     */
     public void loadSTLFile(String filepath, int prec, ColorObject col, Vector3f translate, float scale) {
         try ( DataInputStream dis = new DataInputStream(new FileInputStream(filepath))) {
             dis.skipBytes(96);
@@ -72,7 +89,7 @@ public class STLLoader {
                     float x = bufferX.getFloat();
                     float y = bufferY.getFloat();
                     float z = bufferZ.getFloat();
-                    Vector3f vertex = new Vector3f(x, z, y);
+                    Vector3f vertex = new Vector3f(x, z, y); // The loaded triangles had flipped z and y so this is correcting that
                     v[j] = vertex;
                 }
                 if (i % prec == 0) {
@@ -90,6 +107,10 @@ public class STLLoader {
         }
     }
 
+    
+    /**
+     * Centers the loaded triangles, translating them won't make a difference. centers by the bounding box, not by center of mass.
+     */
     public void center() {
         Vector3f[] vertices = new Vector3f[triangles.size() * 3];
         for (int i = 0; i < triangles.size(); i++) {
@@ -130,14 +151,28 @@ public class STLLoader {
         }
     }
 
+    
+    /**
+     * Retrieve triangles
+     * @return The loaded triangles
+     */
     public ArrayList<Triangle> get() {
         return triangles;
     }
 
+    
+    /**
+     * @return The amount of triangles loaded
+     */
     public int getSize() {
         return triangles.size();
     }
 
+    
+    /**
+     * Returns what file format it accepts, could be useful when dealingwith both OBJ and STL loaders.
+     * @return The File extension
+     */
     public String getExtension() {
         return "stl";
     }

@@ -23,14 +23,32 @@ public class Window extends JPanel {
     private Dimension s;
     private int w, h;
 
+    /**
+     * Creates a window
+     * @param name The name of the frame
+     */
     public Window(String name) {
         frame = new JFrame(name);
     }
 
+    /**
+     * Adds a Component to the JFrame
+     * @param comp The component to add
+     */
     public void addComponent(Component comp) {
         frame.add(comp);
     }
 
+    /**
+     * Creates and initialises a frame.
+     * 
+     * @param width The width of the frame.
+     * @param height The height of the frame.
+     * @param title Set the title bar visible.
+     * @param exitOnClose Set if the program should exit when the frame is closed.
+     * @param fullscreen Set fullscreen mode.
+     * @param opacity Set opacity of the frame. Note: only works if the frame dossen't have a title bar.
+     */
     public void createFrame(int width, int height, boolean title, boolean exitOnClose, boolean fullscreen, float opacity) {
         w = width;
         h = height;
@@ -94,6 +112,9 @@ public class Window extends JPanel {
         frame.setVisible(true);
     }
 
+    /**
+     * Render frame from the content drawn from draw().
+     */
     public void render() {
         GraphicsConfiguration gfxConfig = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration();
         BufferedImage buffer = gfxConfig.createCompatibleImage(w, h);
