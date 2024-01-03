@@ -100,6 +100,7 @@ public class OBJLoader {
                         objectTriangles.add(t);
                         continue;
                     }
+                    
                     int colA = a.indexOf("/", vIndexA + 1);
                     int colB = b.indexOf("/", vIndexB + 1);
                     int colC = c.indexOf("/", vIndexC + 1);
