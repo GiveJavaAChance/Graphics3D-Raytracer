@@ -88,16 +88,22 @@ public class OBJLoader {
                     int vIndexA = a.indexOf("/");
                     int vIndexB = b.indexOf("/");
                     int vIndexC = c.indexOf("/");
-                    int colA = a.indexOf("/", vIndexA + 1);
-                    int colB = b.indexOf("/", vIndexB + 1);
-                    int colC = c.indexOf("/", vIndexC + 1);
-                    // Parsing
                     String aVIdx = a.substring(0, vIndexA);
                     String bVIdx = b.substring(0, vIndexB);
                     String cVIdx = c.substring(0, vIndexC);
                     int vAi = Integer.parseInt(aVIdx) - 1;
                     int vBi = Integer.parseInt(bVIdx) - 1;
                     int vCi = Integer.parseInt(cVIdx) - 1;
+                    if (line.contains("//")) {
+                        Triangle t = new Triangle(vertices.get(vAi), vertices.get(vBi), vertices.get(vCi), new ColorObject(1.0f, 1.0f, 1.0f));
+                        triangles.add(t);
+                        objectTriangles.add(t);
+                        continue;
+                    }
+                    int colA = a.indexOf("/", vIndexA + 1);
+                    int colB = b.indexOf("/", vIndexB + 1);
+                    int colC = c.indexOf("/", vIndexC + 1);
+                    // Parsing
                     String icolA = a.substring(vIndexA + 1, colA);
                     String icolB = b.substring(vIndexB + 1, colB);
                     String icolC = c.substring(vIndexC + 1, colC);
@@ -186,6 +192,7 @@ public class OBJLoader {
             int width = 0, height = 0;
             ArrayList<Triangle> objectTriangles = new ArrayList<>();
             while ((line = bufferedReader.readLine()) != null) {
+                System.out.println(line);
                 if (line.startsWith("v ")) {
                     String data = line.replace("v ", "");
                     int separator1 = data.indexOf(" ");
@@ -218,16 +225,22 @@ public class OBJLoader {
                     int vIndexA = a.indexOf("/");
                     int vIndexB = b.indexOf("/");
                     int vIndexC = c.indexOf("/");
-                    int colA = a.indexOf("/", vIndexA + 1);
-                    int colB = b.indexOf("/", vIndexB + 1);
-                    int colC = c.indexOf("/", vIndexC + 1);
-                    // Parsing
                     String aVIdx = a.substring(0, vIndexA);
                     String bVIdx = b.substring(0, vIndexB);
                     String cVIdx = c.substring(0, vIndexC);
                     int vAi = Integer.parseInt(aVIdx) - 1;
                     int vBi = Integer.parseInt(bVIdx) - 1;
                     int vCi = Integer.parseInt(cVIdx) - 1;
+                    if (line.contains("//")) {
+                        Triangle t = new Triangle(vertices.get(vAi), vertices.get(vBi), vertices.get(vCi), new ColorObject(1.0f, 1.0f, 1.0f));
+                        triangles.add(t);
+                        objectTriangles.add(t);
+                        continue;
+                    }
+                    int colA = a.indexOf("/", vIndexA + 1);
+                    int colB = b.indexOf("/", vIndexB + 1);
+                    int colC = c.indexOf("/", vIndexC + 1);
+                    // Parsing
                     String icolA = a.substring(vIndexA + 1, colA);
                     String icolB = b.substring(vIndexB + 1, colB);
                     String icolC = c.substring(vIndexC + 1, colC);
