@@ -417,6 +417,7 @@ public class Graphics3D {
             maxX = Math.max(maxX, v.x);
             maxY = Math.max(maxY, v.y);
         }
+        
         int w = (int) Math.ceil(maxX - minX);
         int h = (int) Math.ceil(maxY - minY);
         if (p.length == 2) {
