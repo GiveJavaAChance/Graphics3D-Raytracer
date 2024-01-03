@@ -1,5 +1,6 @@
 package com.polyray.graphics3d;
 
+import java.awt.AlphaComposite;
 import java.awt.Color;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
@@ -257,7 +258,7 @@ public class Graphics3D {
             } else {
                 for (Vector3f v : obj.vertices) {
                     totalVertices++;
-                    newObject.addVertex(r.calcRot(v, ang, prioAxis));
+                    newObject.addVertex(r.calcRot(v, ang, prioAxis), obj.radius);
                 }
             }
             rotated.add(newObject);
@@ -368,70 +369,31 @@ public class Graphics3D {
             if (allXBelowZero || allXAboveWindowX || allYBelowZero || allYAboveWindowY) {
                 continue;
             }
-            /*off = 0;
-            int length = veci.length;
-            Vector2f[] interVeci = new Vector2f[length];
-            boolean prevZ1 = false;
-            for (int i = 0; i < length; i++) {
-                Vector2f v0 = veci[(i + length - 1) % length];
-                Vector2f v1 = veci[i];
-                Vector2f v2 = veci[(i + 1) % length];
-                boolean z0 = isInside(v0);
-                boolean z1 = isInside(v1);
-                boolean z2 = isInside(v2);
-                if (i == 0) {
-                    prevZ1 = z0;
-                }
-                if (!z1) {
-                    if (z0 && !z2) {  // If right neighbour is inside -> move towards it
-                        veci[i + off] = tryProject(v1, v0, false);
-                    } else if (!z0 && z2) {  // If left neighbour is inside -> move towards it
-                        veci[i + off] = tryProject(v1, v2, false);
-                    } else if (z0 && z2) { // If both neighbours are inside -> :
-                        if (!prevZ1) { // If the previous "current" was outside -> move to the left neighbour
-                            veci[i + off] = tryProject(v1, v0, false);
-                        } else if (prevZ1) { // If the previus "current" was inside -> split up to 2 points and move towards each neighbour
-                            Vector3f v1z = v1;
-                            veci[i + off] = tryProject(v1, v0, false);
-                            veci = insert(veci, i + 1, tryProject(v1z, v2, false));
-                            off++;
-                        }
-                    } else if (!z0 && !z2) { // If both neighbours are outside -> remove current
-                        veci[i + off] = null;
-                    }
-                } else {
-                    try {
-                        veci[i + off] = project2D(v1);
-                    } catch (ProjectionException ex) {
-                    }
-                }
-                prevZ1 = z1;
-            }*/
-            if (veci.length >= 2) { // Consolidated the polygon creation logic
-                /*if (obj.gradient) { // Is made of multiple colors
+            if (veci.length > 1) { // Consolidated the polygon creation logic
+                if (obj.gradient) { // Is made of multiple colors
                     BufferedImage image = gradientPolygon(veci, obj.getColors(), obj.fill);
                     g2d.drawImage(image, 0, 0, null);
-                } else {*/
-                Polygon p = new Polygon();
-                for (Vector2f v : veci) {
-                    if (v != null) {
-                        p.addPoint((int) v.x, (int) v.y);
-                        verticesRendered++;
+                } else {
+                    Polygon p = new Polygon();
+                    for (Vector2f v : veci) {
+                        if (v != null) {
+                            p.addPoint((int) v.x, (int) v.y);
+                            verticesRendered++;
+                        }
+                    }
+                    if (veci.length > 2) { // Closes the polygon and fills/draws
+                        if (obj.fill) {
+                            g2d.fillPolygon(p);
+                        } else {
+                            g2d.drawPolygon(p);
+                        }
+                    } else { // If it's a line
+                        if (veci[0] != null && veci[1] != null) {
+                            g2d.drawLine((int) veci[0].x, (int) veci[0].y, (int) veci[1].x, (int) veci[1].y);
+                        }
                     }
                 }
-                if (veci.length > 2) { // Closes the polygon and fills/draws
-                    if (obj.fill) {
-                        g2d.fillPolygon(p);
-                    } else {
-                        g2d.drawPolygon(p);
-                    }
-                } else { // If it's a line
-                    if (veci[0] != null && veci[1] != null) {
-                        g2d.drawLine((int) veci[0].x, (int) veci[0].y, (int) veci[1].x, (int) veci[1].y);
-                    }
-                }
-                //}
-            } else if (veci.length == 1 && veci[0] != null) { // Draw a circle if only one point exists
+            } else if (veci[0] != null) { // Draw a circle if only one point exists
                 float radius = calcPointRadius(obj.vertices.get(0), obj.radius);
                 int rx = (int) (veci[0].x - radius / 2.0f);
                 int ry = (int) (veci[0].y - radius / 2.0f);
@@ -469,81 +431,41 @@ public class Graphics3D {
             g.drawLine((int) x1, (int) y1, (int) x2, (int) y2);
             return img;
         }
+        BufferedImage tmp = new BufferedImage((int) Math.min(minX + w + 1, windowX), (int) Math.min(minY + h + 1, windowY), BufferedImage.TYPE_INT_ARGB);
         Polygon poly = new Polygon();
         for (Vector2f p1 : p) {
             poly.addPoint((int) (p1.x - minX), (int) (p1.y - minY));
         }
-        BufferedImage[] images = new BufferedImage[(int) Math.ceil(p.length / 2.0f)];
+        Graphics2D g = tmp.createGraphics();
         for (int i = 0; i < (int) Math.ceil(p.length / 2.0f); i++) {
-            images[i] = new BufferedImage((int) Math.min(w + 1, windowX), (int) Math.min(h + 1, windowY), BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g = images[i].createGraphics();
             float x1 = p[i].x - minX;
             float y1 = p[i].y - minY;
             float x2 = p[i + (int) Math.ceil((p.length - 1.0f) / 2.0f)].x - minX;
             float y2 = p[i + (int) Math.ceil((p.length - 1.0f) / 2.0f)].y - minY;
             Color c1 = colors[i];
             Color c2 = colors[i + (int) Math.ceil((p.length - 1.0f) / 2.0f)];
-            int alpha = (int) (255.0f / p.length);
-            Color a = new Color(c1.getRed(), c1.getGreen(), c1.getBlue(), alpha);
-            Color b = new Color(c2.getRed(), c2.getGreen(), c2.getBlue(), alpha);
+            int alpha = (int) (255.0f / p.length); // Adjust alpha based on the number of shapes
+            Color a = new Color(c1.getRed(), c1.getGreen(), c1.getBlue());
+            Color b = new Color(c2.getRed(), c2.getGreen(), c2.getBlue());
             GradientPaint gradient = new GradientPaint(x1, y1, a, x2, y2, b);
+
+            // Apply alpha compositing
+            AlphaComposite alphaComposite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f);
+            g.setComposite(alphaComposite);
+
             g.setPaint(gradient);
             if (fill) {
                 g.fill(poly);
             } else {
                 g.draw(poly);
             }
-            g.dispose();
         }
-        BufferedImage mixed = mixImages(images);
-        for (BufferedImage img : images) {
-            img.flush();
-        }
-        BufferedImage out = new BufferedImage((int) Math.min(minX + w + 1, windowX), (int) Math.min(minY + h + 1, windowY), BufferedImage.TYPE_INT_ARGB);
+        g.dispose();
+        BufferedImage out = new BufferedImage((int) windowX, (int) windowY, BufferedImage.TYPE_INT_ARGB);
         Graphics2D g2d = out.createGraphics();
-        g2d.drawImage(mixed, (int) minX, (int) minY, null);
+        g2d.drawImage(tmp, (int) minX, (int) minY, null);
         g2d.dispose();
-        mixed.flush();
         return out;
-    }
-
-    public BufferedImage mixImages(BufferedImage[] images) {
-        int w = images[0].getWidth();
-        int h = images[0].getHeight();
-        BufferedImage result = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        for (int y = 0; y < h; y++) {
-            for (int x = 0; x < w; x++) {
-                int totalRed = 0, totalGreen = 0, totalBlue = 0;
-                boolean hasNonTransparentPixel = false;
-                for (BufferedImage img : images) {
-                    int pixel = img.getRGB(x, y);
-                    int alpha = (pixel >> 24) & 0xFF;
-                    if (alpha != 0) {
-                        hasNonTransparentPixel = true;
-                        totalRed += (pixel >> 16) & 0xFF;
-                        totalGreen += (pixel >> 8) & 0xFF;
-                        totalBlue += pixel & 0xFF;
-                    } else {
-                        break;
-                    }
-                }
-                if (hasNonTransparentPixel) {
-                    int avgRed = totalRed / images.length;
-                    int avgGreen = totalGreen / images.length;
-                    int avgBlue = totalBlue / images.length;
-                    int alpha = 255;
-                    int avgPixel = (alpha << 24) | (avgRed << 16) | (avgGreen << 8) | avgBlue;
-                    result.setRGB(x, y, avgPixel);
-                } else {
-                    result.setRGB(x, y, 0x00000000);
-                }
-            }
-        }
-        return result;
-    }
-
-    private int lim(float a) {
-        return (int) Math.max(Math.min(a, 255.0f), 0.0f);
     }
 
     private Vector2f tryProject(Vector3f pos, Vector3f to, boolean single) {
@@ -888,10 +810,9 @@ public class Graphics3D {
         objects.add(obj);
     }
 
-    
     /**
      * Adds all objects
-     * 
+     *
      * @param objects the objects that are going to be added
      */
     public void addAllObjects(Graphics3DObject[] objects) {
@@ -1097,21 +1018,17 @@ public class Graphics3D {
     }
 
     private float calcPointRadius(Vector3f v, float radius) {
-        Vector3f rot = r.calcRot(v, ang, prioAxis);
-        if (getZDepth(rot) > minRendDist) {
-            Vector2f v1 = null;
-            Vector2f v2 = null;
+        if (getZDepth(v) > minRendDist) {
             try {
-                v1 = project2D(rot);
-                v2 = project2D(new Vector3f(rot.x + radius, rot.y, rot.z));
+                Vector2f v1 = project2D(v);
+                Vector2f v2 = project2D(new Vector3f(v.x + radius, v.y, v.z));
+                return Vector2f.length(Vector2f.sub(v1, v2));
             } catch (ProjectionException ex) {
             }
-            return Vector2f.length(Vector2f.sub(v1, v2));
-        } else {
-            return 0.0f;
         }
+        return 0.0f;
     }
-    
+
     // Legacy:
 
     /*private Object calcX(float x, float y, float z) {
@@ -1236,7 +1153,6 @@ public class Graphics3D {
             return "err";
         }
     }*/
-    
     private float appRotX(double a, double b, double c, float x, float y, float z, double ang) {
         return (float) (x * Math.cos(ang) + (b * z - c * y) * Math.sin(ang) + a * (a * x + b * y + c * z) * (1.0 - Math.cos(ang)));
     }
