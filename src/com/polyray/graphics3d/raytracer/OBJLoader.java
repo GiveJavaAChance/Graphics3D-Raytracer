@@ -100,7 +100,7 @@ public class OBJLoader {
                         objectTriangles.add(t);
                         continue;
                     }
-                    
+
                     int colA = a.indexOf("/", vIndexA + 1);
                     int colB = b.indexOf("/", vIndexB + 1);
                     int colC = c.indexOf("/", vIndexC + 1);
@@ -177,7 +177,11 @@ public class OBJLoader {
             BufferedReader mtlBufferedReader = new BufferedReader(mtlFileReader);
             String line;
             ArrayList<String> filepaths = new ArrayList<>();
+            ArrayList<ColorObject> cols = new ArrayList<>();
+            ArrayList<String> materialColorNames = new ArrayList<>();
             String name = "";
+            BufferedImage image = null;
+            ColorObject currCol = null;
             while ((line = mtlBufferedReader.readLine()) != null) {
                 if (line.startsWith("newmtl ")) {
                     name = line.replace("newmtl ", "").trim().toLowerCase();
@@ -188,12 +192,25 @@ public class OBJLoader {
                     String fileName = filep.getName();
                     filepaths.add(name + " " + fileName.trim());
                 }
+                if (line.startsWith("Kd ")) {
+                    String data = line.replace("Kd ", "");
+                    int separator1 = data.indexOf(" ");
+                    String r = data.substring(0, separator1).trim();
+                    int separator2 = data.indexOf(" ", separator1 + 1);
+                    String g = data.substring(separator1, separator2).trim();
+                    String b = data.substring(separator2).trim();
+                    float R = Float.parseFloat(r);
+                    float G = Float.parseFloat(g);
+                    float B = -Float.parseFloat(b);
+                    ColorObject col = new ColorObject(R, G, B);
+                    cols.add(col);
+                    materialColorNames.add(name);
+                }
             }
-            BufferedImage image = null;
+
             int width = 0, height = 0;
             ArrayList<Triangle> objectTriangles = new ArrayList<>();
             while ((line = bufferedReader.readLine()) != null) {
-                System.out.println(line);
                 if (line.startsWith("v ")) {
                     String data = line.replace("v ", "");
                     int separator1 = data.indexOf(" ");
@@ -233,7 +250,25 @@ public class OBJLoader {
                     int vBi = Integer.parseInt(bVIdx) - 1;
                     int vCi = Integer.parseInt(cVIdx) - 1;
                     if (line.contains("//")) {
-                        Triangle t = new Triangle(vertices.get(vAi), vertices.get(vBi), vertices.get(vCi), new ColorObject(1.0f, 1.0f, 1.0f));
+                        ColorObject tCol = new ColorObject(1.0f, 1.0f, 1.0f);
+                        if (image != null && !colorPos.isEmpty()) {
+                            String A = a.substring(vIndexA + 2);
+                            String B = a.substring(vIndexB + 2);
+                            String C = a.substring(vIndexC + 2);
+                            int aa = Integer.parseInt(A);
+                            int bb = Integer.parseInt(B);
+                            int cc = Integer.parseInt(C);
+                            Vector2f posA = colorPos.get(aa);
+                            Vector2f posB = colorPos.get(bb);
+                            Vector2f posC = colorPos.get(cc);
+                            ColorObject cA = ColorObject.toColorObject(new Color(image.getRGB((int) (posA.x * (width - 1.0f)), (int) ((1.0f - posA.y) * (height - 1.0f)))));
+                            ColorObject cB = ColorObject.toColorObject(new Color(image.getRGB((int) (posB.x * (width - 1.0f)), (int) ((1.0f - posB.y) * (height - 1.0f)))));
+                            ColorObject cC = ColorObject.toColorObject(new Color(image.getRGB((int) (posC.x * (width - 1.0f)), (int) ((1.0f - posC.y) * (height - 1.0f)))));
+                            tCol = ColorObject.add(ColorObject.add(cA, cB), cC).mul(1.0f / 3.0f);
+                        } else if (currCol != null) {
+                            tCol = currCol;
+                        }
+                        Triangle t = new Triangle(vertices.get(vAi), vertices.get(vBi), vertices.get(vCi), tCol);
                         triangles.add(t);
                         objectTriangles.add(t);
                         continue;
@@ -257,6 +292,8 @@ public class OBJLoader {
                         ColorObject cB = ColorObject.toColorObject(new Color(image.getRGB((int) (posB.x * (width - 1.0f)), (int) ((1.0f - posB.y) * (height - 1.0f)))));
                         ColorObject cC = ColorObject.toColorObject(new Color(image.getRGB((int) (posC.x * (width - 1.0f)), (int) ((1.0f - posC.y) * (height - 1.0f)))));
                         triangleCol = ColorObject.add(ColorObject.add(cA, cB), cC).mul(1.0f / 3.0f);
+                    } else if (currCol != null) {
+                        triangleCol = currCol;
                     }
                     Triangle t = new Triangle(vertices.get(vAi), vertices.get(vBi), vertices.get(vCi), triangleCol);
                     triangles.add(t);
@@ -273,24 +310,43 @@ public class OBJLoader {
                     float Z = Float.parseFloat(z);
                     Vector3f v = new Vector3f(X, Y, Z);
                     normals.add(v);
-                } else if (line.startsWith("o ")) {
-                    String data = line.replace("o ", "").trim().toLowerCase();
+                } else if (line.startsWith("usemtl ")) {
+                    String data = line.replace("usemtl ", "").trim().toLowerCase();
                     if (!objectTriangles.isEmpty()) {
                         objects.add(objectTriangles);
                         objectNames.add(data);
                         objectTriangles.clear();
                     }
+                    boolean doNull = true;
                     for (String filepath : filepaths) {
                         String objName = filepath.substring(0, filepath.indexOf(" ")).trim();
                         String fileName = filepath.substring(filepath.indexOf(" ") + 1).trim();
-                        if (data.contains(objName)) {
-                            File f = new File(texturePath + "\\" + fileName);
+                        if (data.equals(objName)) {
+                            File f = new File(texturePath + File.separator + fileName);
                             if (f.exists()) {
                                 image = ImageIO.read(f);
                                 width = image.getWidth();
                                 height = image.getHeight();
                             }
+                            doNull = false;
+                            break;
                         }
+                    }
+                    if (doNull) {
+                        image = null;
+                    }
+                    doNull = true;
+                    for (int i = 0; i < cols.size(); i++) {
+                        String n = materialColorNames.get(i);
+                        
+                        if (data.equals(n)) {
+                            currCol = cols.get(i);
+                            doNull = false;
+                            break;
+                        }
+                    }
+                    if (doNull) {
+                        currCol = null;
                     }
                 }
             }
