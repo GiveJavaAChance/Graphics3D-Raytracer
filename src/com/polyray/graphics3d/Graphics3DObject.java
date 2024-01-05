@@ -12,6 +12,7 @@ public class Graphics3DObject {
     public boolean fill = false;
     public boolean gradient = false;
     private Vector3f add = new Vector3f(0.0f, 0.0f, 0.0f);
+    private float depth;
 
     public void addVertex(Vector3f vertex) {
         this.vertices.add(vertex);
@@ -48,5 +49,13 @@ public class Graphics3DObject {
 
     public void setColor(Color c) {
         this.c = c;
+    }
+    
+    void setDepth(float depth) {
+        this.depth = depth;
+    }
+
+    float getDepth() {
+        return depth;
     }
 }
