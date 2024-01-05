@@ -9,6 +9,7 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 
 public class Graphics3D {
 
@@ -18,9 +19,11 @@ public class Graphics3D {
     public int prioAxis = 2, verticesRendered = 0, totalVertices = 0;
     public Color color = Color.BLACK;
     public final ArrayList<Graphics3DObject> objects = new ArrayList<>();
+    private ArrayList<Graphics3DObject> rotated = new ArrayList<>();
     private Graphics3DObject polygon = new Graphics3DObject();
     private final Rotator r = new Rotator();
     private Vector3f ang = new Vector3f(0.0f, 0.0f, 0.0f);
+    public float RTime, ZTime, REMTime, STime;
 
     /**
      * Sets up the renderer
@@ -245,56 +248,65 @@ public class Graphics3D {
         g2d.setRenderingHints(rh);
 
         // Rotate
-        totalVertices = 0;
-        ArrayList<Graphics3DObject> rotated = new ArrayList<>();
-        for (Graphics3DObject obj : objects) {
-            Graphics3DObject newObject = new Graphics3DObject();
-            newObject.doFill(obj.fill);
-            newObject.setColor(obj.c);
-            if (obj.gradient) {
-                for (int i = 0; i < obj.vertices.size(); i++) {
-                    newObject.addVertex(r.calcRot(obj.vertices.get(i), ang, prioAxis), obj.colors.get(i));
+        ArrayList<Graphics3DObject> rCopy = new ArrayList<>(rotated);
+        Thread t = new Thread(() -> {
+            totalVertices = 0;
+            rotated = new ArrayList<>();
+            for (Graphics3DObject obj : objects) {
+                Graphics3DObject newObject = new Graphics3DObject();
+                newObject.doFill(obj.fill);
+                newObject.setColor(obj.c);
+                if (obj.gradient) {
+                    for (int i = 0; i < obj.vertices.size(); i++) {
+                        newObject.addVertex(r.calcRot(obj.vertices.get(i), ang, prioAxis), obj.colors.get(i));
+                    }
+                } else {
+                    for (Vector3f v : obj.vertices) {
+                        totalVertices++;
+                        newObject.addVertex(r.calcRot(v, ang, prioAxis), obj.radius);
+                    }
                 }
-            } else {
-                for (Vector3f v : obj.vertices) {
-                    totalVertices++;
-                    newObject.addVertex(r.calcRot(v, ang, prioAxis), obj.radius);
-                }
+                rotated.add(newObject);
             }
-            rotated.add(newObject);
-        }
-
+        });
+        t.start();
+        long rTime = System.nanoTime();
         // Calulate Z-Depth
-        float[] dist = new float[rotated.size()];
+        float[] dist = new float[rCopy.size()];
         verticesRendered = 0;
-        for (int i = 0; i < rotated.size(); i++) {
-            Graphics3DObject obj = rotated.get(i);
+        for (int i = 0; i < rCopy.size(); i++) {
+            Graphics3DObject obj = rCopy.get(i);
             if (!obj.vertices.isEmpty()) {
-                dist[i] = getZDepth(obj.centerOfMass());
+                Vector3f center = obj.centerOfMass();
+                dist[i] = getZDepth(center);
+                // Cache depth to avoid recalculating
+                obj.setDepth(dist[i]);
             }
-            // Handle the case when obj.vertices is empty if needed
+        }
+        long zTime = System.nanoTime();
+        ArrayList<Graphics3DObject> renderObjects = new ArrayList<>();
+        for (int i = 0; i < rCopy.size(); i++) {
+            if (dist[i] < renderDist && isForward(rCopy.get(i))) {
+                renderObjects.add(rCopy.get(i));
+            }
         }
 
-        // Remove useless objects
-        ArrayList<Graphics3DObject> renderObjects = new ArrayList<>();
-        for (int i = 0; i < rotated.size(); i++) {
-            if (dist[i] < renderDist && isForward(rotated.get(i))) {
-                renderObjects.add(rotated.get(i));
-            }
-        }
-        // If needed, resize the dist array directly
         dist = new float[renderObjects.size()];
         for (int i = 0; i < renderObjects.size(); i++) {
-            dist[i] = getZDepth(renderObjects.get(i).centerOfMass());
+            dist[i] = renderObjects.get(i).getDepth(); // Reuse cached depth
         }
+        long remTime = System.nanoTime();
 
         // Sort
-        Graphics3DObject[] sorted = new Graphics3DObject[renderObjects.size()];
+        /*Graphics3DObject[] sorted = new Graphics3DObject[renderObjects.size()];
         for (int i = 0; i < renderObjects.size(); i++) {
             sorted[i] = renderObjects.get(i);
         }
-        sorted = sortGraphics3DObjects(sorted, dist);
-
+        sorted = sortGraphics3DObjects(sorted, dist);*/
+        Graphics3DObject[] sorted = renderObjects.toArray(Graphics3DObject[]::new);
+        Arrays.sort(sorted, Comparator.comparingDouble(Graphics3DObject::getDepth).reversed());
+        long sTime = System.nanoTime();
+        
         // Project
         for (Graphics3DObject obj : sorted) { // Sorted
             g2d.setColor(obj.c);
@@ -401,8 +413,16 @@ public class Graphics3D {
                 verticesRendered++;
             }
         }
+        try {
+            t.join();
+        } catch (InterruptedException ex) {
+        }
         long endTime = System.nanoTime();
         renderTime = (endTime - startTime) / 1000000.0f;
+        RTime = (rTime - startTime) / 1000000.0f;
+        ZTime = (zTime - rTime) / 1000000.0f;
+        REMTime = (remTime - zTime) / 1000000.0f;
+        STime = (sTime - remTime) / 1000000.0f;
     }
 
     private BufferedImage gradientPolygon(Vector2f[] p, Color[] colors, boolean fill) {
@@ -417,7 +437,7 @@ public class Graphics3D {
             maxX = Math.max(maxX, v.x);
             maxY = Math.max(maxY, v.y);
         }
-        
+
         int w = (int) Math.ceil(maxX - minX);
         int h = (int) Math.ceil(maxY - minY);
         if (p.length == 2) {
