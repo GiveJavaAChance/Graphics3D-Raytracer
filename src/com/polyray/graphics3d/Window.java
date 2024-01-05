@@ -12,6 +12,8 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
+import java.awt.event.MouseWheelListener;
 import java.awt.image.BufferedImage;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -92,6 +94,7 @@ public class Window extends JPanel {
                 drag(e);
             }
         });
+        addMouseWheelListener(this::scroll);
         addKeyListener(new KeyListener() {
             @Override
             public void keyTyped(KeyEvent e) {
@@ -140,6 +143,9 @@ public class Window extends JPanel {
     }
     
     public void drag(MouseEvent e) {
+    }
+    
+    public void scroll(MouseWheelEvent e) {
     }
     
     public void keyType(KeyEvent e) {
