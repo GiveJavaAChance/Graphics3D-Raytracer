@@ -1,6 +1,7 @@
 package com.polyray.graphics3d;
 
 import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 
 public class Graphics3DObject {
@@ -11,6 +12,8 @@ public class Graphics3DObject {
     public Color c = Color.BLACK;
     public boolean fill = false;
     public boolean gradient = false;
+    public boolean hasTexture = false;
+    public BufferedImage texture;
     private Vector3f add = new Vector3f(0.0f, 0.0f, 0.0f);
     private float depth;
 
@@ -53,6 +56,11 @@ public class Graphics3DObject {
     
     void setDepth(float depth) {
         this.depth = depth;
+    }
+    
+    public void setTexture(BufferedImage texture) {
+        this.texture = texture;
+        this.hasTexture = true;
     }
 
     float getDepth() {

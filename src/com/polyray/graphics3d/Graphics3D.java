@@ -23,6 +23,7 @@ public class Graphics3D {
     private Graphics3DObject polygon = new Graphics3DObject();
     private final Rotator r = new Rotator();
     private Vector3f ang = new Vector3f(0.0f, 0.0f, 0.0f);
+    private Transform tr = new Transform();
     public float RTime, ZTime, REMTime, STime;
 
     /**
@@ -62,7 +63,7 @@ public class Graphics3D {
         this.cameraDist = dist;
         this.windowX = windowW;
         this.windowY = windowH;
-
+        tr.setSize((int) windowW, (int) windowH);
         /*System.out.println("cameraX : " + cameraX);
         System.out.println("cameraY : " + cameraY);
         System.out.println("cameraZ : " + cameraZ);
@@ -256,6 +257,9 @@ public class Graphics3D {
                 Graphics3DObject newObject = new Graphics3DObject();
                 newObject.doFill(obj.fill);
                 newObject.setColor(obj.c);
+                if (obj.hasTexture) {
+                    newObject.setTexture(obj.texture);
+                }
                 if (obj.gradient) {
                     for (int i = 0; i < obj.vertices.size(); i++) {
                         newObject.addVertex(r.calcRot(obj.vertices.get(i), ang, prioAxis), obj.colors.get(i));
@@ -306,7 +310,7 @@ public class Graphics3D {
         Graphics3DObject[] sorted = renderObjects.toArray(Graphics3DObject[]::new);
         Arrays.sort(sorted, Comparator.comparingDouble(Graphics3DObject::getDepth).reversed());
         long sTime = System.nanoTime();
-        
+
         // Project
         for (Graphics3DObject obj : sorted) { // Sorted
             g2d.setColor(obj.c);
@@ -382,7 +386,14 @@ public class Graphics3D {
                 continue;
             }
             if (veci.length > 1) { // Consolidated the polygon creation logic
-                if (obj.gradient) { // Is made of multiple colors
+                if (obj.hasTexture && veci.length == 4) {
+                    BufferedImage img = tr.rectToQuad(obj.texture, (int) veci[0].x, (int) veci[0].y, (int) veci[1].x, (int) veci[1].y, (int) veci[2].x, (int) veci[2].y, (int) veci[3].x, (int) veci[3].y);
+                    int minX = tr.minX;
+                    int minY = tr.minY;
+                    if (img != null) {
+                        g2d.drawImage(img, minX, minY, null);
+                    }
+                } else if (obj.gradient) { // Is made of multiple colors
                     BufferedImage image = gradientPolygon(veci, obj.getColors(), obj.fill);
                     g2d.drawImage(image, 0, 0, null);
                 } else {
