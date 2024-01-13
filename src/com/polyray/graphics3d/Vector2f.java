@@ -99,4 +99,5 @@ public class Vector2f {
     public String toString() {
         return "Vector2f: (" + this.x + ", " + this.y + ")";
     }
+    
 }
