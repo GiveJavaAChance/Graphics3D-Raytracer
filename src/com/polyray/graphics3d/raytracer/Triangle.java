@@ -3,6 +3,7 @@ package com.polyray.graphics3d.raytracer;
 import com.polyray.graphics3d.Vector3f;
 import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 
 public class Triangle {
 
@@ -22,6 +23,25 @@ public class Triangle {
         Vector3f u = Vector3f.sub(this.b, this.a);
         Vector3f v = Vector3f.sub(this.c, this.a);
         return Vector3f.normalize(Vector3f.cross(u, v));
+    }
+    
+    public Triangle[] subdivide(int amt) {
+        ArrayList<Triangle> initT = new ArrayList<>();
+        initT.add(this);
+        for (int i = 0; i < amt; i++) {
+            ArrayList<Triangle> subT = new ArrayList<>();
+            for (Triangle t : initT) {
+                Vector3f ma = Vector3f.lerp(t.a, t.b, 0.5f);
+                Vector3f mb = Vector3f.lerp(t.b, t.c, 0.5f);
+                Vector3f mc = Vector3f.lerp(t.c, t.a, 0.5f);
+                subT.add(new Triangle(mc,t.a,ma,t.col));
+                subT.add(new Triangle(ma,t.b,mb,t.col));
+                subT.add(new Triangle(mb,t.c,mc,t.col));
+                subT.add(new Triangle(t.a,t.b,t.c,t.col));
+            }
+            initT = subT;
+        }
+        return initT.toArray(Triangle[]::new);
     }
 
     public ColorObject getTextureColor(Vector3f pos) {
