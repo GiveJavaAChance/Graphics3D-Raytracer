@@ -94,10 +94,6 @@ public class Vector2f {
         }
         return new Vector2f(X, Y);
     }
-    
-    public static Vector2f random() {
-        return Vector2f.normalize(new Vector2f((float)Math.random() - 0.5f,(float)Math.random() - 0.5f));
-    }
 
     @Override
     public String toString() {
