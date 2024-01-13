@@ -4,8 +4,8 @@ Graphics3D isn't just about 3D graphics; it's an ambitious project aimed at sign
 ## Raytracer
 Additionally, this project incorporates a raytracer, a significant work in progress. The current primary focus is to optimize it for GPU utilization, which promises substantial speed improvements over the current multithreadded CPU processing.
 
-## Graphics 3D 1.0
-[Graphics3D_1.0.jar](https://github.com/GiveJavaAChance/Graphics3D-Raytracer/releases/tag/Graphics3D_1.0)
+## Graphics 3D Latest:
+[Graphics3D_1.1.jar](https://github.com/GiveJavaAChance/Graphics3D-Raytracer/releases/tag/Graphics3D_1.1)
 
 # Usage
 If your aim is to create a 3D game, here are some simple tips how to get started:
