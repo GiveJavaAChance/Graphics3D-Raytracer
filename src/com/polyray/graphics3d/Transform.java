@@ -6,10 +6,10 @@ import java.awt.image.WritableRaster;
 
 public class Transform {
 
-    int wWidth, wHeight;
-    int minX, minY;
+    public int wWidth, wHeight;
+    public int minX, minY;
 
-    public void setSize(int w, int h) {
+    public void setViewSize(int w, int h) {
         this.wWidth = w;
         this.wHeight = h;
     }
