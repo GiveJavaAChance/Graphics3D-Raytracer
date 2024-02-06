@@ -14,7 +14,7 @@ public class RaySolver {
     private Bound[][][] grid;
     private boolean[][][] gridIsEmpty;
     private int sub;
-    private final float EPSILON = 0.0000001f;
+    private final float EPSILON = 0.00000001f;
 
     public RaySolver(float renderDist, int sub) {
         this.renderDistance = renderDist;
@@ -86,35 +86,40 @@ public class RaySolver {
         return a + factor * (b - a);
     }
 
-    private void printCol(ColorObject col) {
-        System.out.println("Out: R: " + col.R + " G: " + col.G + " B: " + col.B);
-    }
-
     public ColorObject castRay(float px, float py) {
         Vector3f dir = Vector3f.normalize(Vector3f.sub(Vector3f.add(new Vector3f(px, py, 0.0f), camPos), camCenter));
         Ray ray = new Ray(camCenter, dir, new ColorObject(1.0f, 1.0f, 1.0f));
         ColorObject col = ray.c;
         for (int i = 0; i < 10; i++) {
             ray = castRay(ray);
+            if (ray.c == null) {
+                col = new ColorObject(0.0f, 0.0f, 0.0f);
+                break;
+            }
             col = col.mul(ray.c);
             raysFired++;
             if (ray.c.maxIntensity() > 1.0f || col.isBlack()) {
                 break;
             }
         }
-        //ColorObject col = recursiveCast(ray, 0, 3, 2);
+        //ColorObject col = recursiveCast(ray, 0, 3, 10);
         return col;
     }
 
     private ColorObject recursiveCast(Ray ray, int pos, int maxiter, int amt) {
+        ColorObject color = ray.c;
         ray = castRay(ray);
-        if (pos == maxiter || ray.c.R == 0.0f || ray.c.G == 0.0f || ray.c.B == 0.0f || ray.c.maxIntensity() > 1.0f) {
+        if (ray.c == null) {
+            return new ColorObject(0.0f, 0.0f, 0.0f);
+        }
+        if (pos == maxiter || ray.c.isBlack() || ray.c.maxIntensity() > 1.0f) {
             return ray.c;
         }
         ColorObject out = new ColorObject(0.0f, 0.0f, 0.0f);
         for (int i = 0; i < amt; i++) {
-            out = ColorObject.add(out, recursiveCast(ray, pos + 1, maxiter, amt).mul(1.0f / amt));
+            out = ColorObject.add(out, recursiveCast(ray, pos + 1, maxiter, amt));
         }
+        out = out.mul(1.0f / amt);
         return out;
     }
 
@@ -122,10 +127,10 @@ public class RaySolver {
         Vector3f in = ray.dir;
         PosCol p = traceRay(ray);
         if (p == null) {
-            return new Ray(ray.pos, ray.dir, new ColorObject(0.0f, 0.0f, 0.0f));
+            return new Ray(ray.pos, ray.dir, null);
         }
         if (Vector3f.dot(ray.dir, normal) > 0.0f) {
-            normal = Vector3f.mul(normal, -1.0f);
+            normal = Vector3f.invert(normal);
         }
         ray.dir = reflectRay(ray.dir, normal);
         float brdf = BRDF(in, ray.dir, normal, new BRDFVals(0.0f, 0.0f, 1.0f));
