@@ -68,9 +68,13 @@ public class Vector3f {
         return new Vector3f(-v.x, -v.y, -v.z);
     }
 
+    public static Vector3f random() {
+        return Vector3f.normalize(new Vector3f((float) Math.random() - 0.5f, (float) Math.random() - 0.5f, (float) Math.random() - 0.5f));
+    }
+
     @Override
     public String toString() {
         return "Vector3f: (" + this.x + ", " + this.y + ", " + this.z + ")";
     }
-    
+
 }
