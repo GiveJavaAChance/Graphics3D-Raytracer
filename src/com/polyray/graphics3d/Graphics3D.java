@@ -24,7 +24,7 @@ public class Graphics3D {
     private final Rotator r = new Rotator();
     private Vector3f ang = new Vector3f(0.0f, 0.0f, 0.0f);
     private Transform tr = new Transform();
-    public float RTime, ZTime, REMTime, STime;
+    public float RTime, ZTime, REMTime, STime, DTime;
 
     /**
      * Sets up the renderer
@@ -272,12 +272,14 @@ public class Graphics3D {
                 }
                 rotated.add(newObject);
             }
+            long rTime = System.nanoTime();
+            RTime = (rTime - startTime) / 1000000.0f;
         });
         t.start();
-        long rTime = System.nanoTime();
+
         // Calulate Z-Depth
         float[] dist = new float[rCopy.size()];
-        verticesRendered = 0;
+
         for (int i = 0; i < rCopy.size(); i++) {
             Graphics3DObject obj = rCopy.get(i);
             if (!obj.vertices.isEmpty()) {
@@ -312,6 +314,7 @@ public class Graphics3D {
         long sTime = System.nanoTime();
 
         // Project
+        verticesRendered = 0;
         for (Graphics3DObject obj : sorted) { // Sorted
             g2d.setColor(obj.c);
             int vLen = obj.vertices.size();
@@ -369,24 +372,26 @@ public class Graphics3D {
             boolean allYAboveWindowY = true;
 
             for (Vector2f v : veci) {
-                if (v.x >= 0) {
-                    allXBelowZero = false;
-                }
-                if (v.x <= windowX) {
-                    allXAboveWindowX = false;
-                }
-                if (v.y >= 0) {
-                    allYBelowZero = false;
-                }
-                if (v.y <= windowY) {
-                    allYAboveWindowY = false;
+                if (v != null) {
+                    if (v.x >= 0) {
+                        allXBelowZero = false;
+                    }
+                    if (v.x <= windowX) {
+                        allXAboveWindowX = false;
+                    }
+                    if (v.y >= 0) {
+                        allYBelowZero = false;
+                    }
+                    if (v.y <= windowY) {
+                        allYAboveWindowY = false;
+                    }
                 }
             }
             if (allXBelowZero || allXAboveWindowX || allYBelowZero || allYAboveWindowY) {
                 continue;
             }
             if (veci.length > 1) { // Consolidated the polygon creation logic
-                if (obj.hasTexture && veci.length == 4) {
+                if (obj.hasTexture && veci.length == 4 && veci[0] != null && veci[1] != null && veci[2] != null && veci[3] != null) { // Has a texture
                     BufferedImage img = tr.rectToQuad(obj.texture, (int) veci[0].x, (int) veci[0].y, (int) veci[1].x, (int) veci[1].y, (int) veci[2].x, (int) veci[2].y, (int) veci[3].x, (int) veci[3].y);
                     int minX = tr.minX;
                     int minY = tr.minY;
@@ -396,24 +401,22 @@ public class Graphics3D {
                 } else if (obj.gradient) { // Is made of multiple colors
                     BufferedImage image = gradientPolygon(veci, obj.getColors(), obj.fill);
                     g2d.drawImage(image, 0, 0, null);
-                } else {
-                    Polygon p = new Polygon();
-                    for (Vector2f v : veci) {
-                        if (v != null) {
-                            p.addPoint((int) v.x, (int) v.y);
-                            verticesRendered++;
+                } else { // Single color
+                    if (veci.length > 2) { // Closes the polygon
+                        Polygon p = new Polygon();
+                        for (Vector2f v : veci) {
+                            if (v != null) {
+                                p.addPoint((int) v.x, (int) v.y);
+                                verticesRendered++;
+                            }
                         }
-                    }
-                    if (veci.length > 2) { // Closes the polygon and fills/draws
                         if (obj.fill) {
-                            g2d.fillPolygon(p);
+                            g2d.fill(p);
                         } else {
-                            g2d.drawPolygon(p);
+                            g2d.draw(p);
                         }
-                    } else { // If it's a line
-                        if (veci[0] != null && veci[1] != null) {
-                            g2d.drawLine((int) veci[0].x, (int) veci[0].y, (int) veci[1].x, (int) veci[1].y);
-                        }
+                    } else if (veci[0] != null && veci[1] != null) {  // If it's a line
+                        g2d.drawLine((int) veci[0].x, (int) veci[0].y, (int) veci[1].x, (int) veci[1].y);
                     }
                 }
             } else if (veci[0] != null) { // Draw a circle if only one point exists
@@ -430,10 +433,10 @@ public class Graphics3D {
         }
         long endTime = System.nanoTime();
         renderTime = (endTime - startTime) / 1000000.0f;
-        RTime = (rTime - startTime) / 1000000.0f;
-        ZTime = (zTime - rTime) / 1000000.0f;
+        ZTime = (zTime - startTime) / 1000000.0f;
         REMTime = (remTime - zTime) / 1000000.0f;
         STime = (sTime - remTime) / 1000000.0f;
+        DTime = (endTime - sTime) / 1000000.0f;
     }
 
     private BufferedImage gradientPolygon(Vector2f[] p, Color[] colors, boolean fill) {
