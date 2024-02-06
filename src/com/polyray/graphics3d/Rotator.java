@@ -52,6 +52,24 @@ public class Rotator {
     }
 
     private Vector3f rotate(Vector3f k, Vector3f v, float ang) {
-        return Vector3f.add(Vector3f.mul(v, (float) Math.cos(ang)), Vector3f.add(Vector3f.mul(Vector3f.cross(k, v), (float) Math.sin(ang)), Vector3f.mul(k, Vector3f.dot(k, v) * (float) (1.0 - Math.cos(ang)))));
+        //return Vector3f.add(Vector3f.mul(v, (float) Math.cos(ang)), Vector3f.add(Vector3f.mul(Vector3f.cross(k, v), (float) Math.sin(ang)), Vector3f.mul(k, Vector3f.dot(k, v) * (float) (1.0 - Math.cos(ang)))));
+        float sinHalfAngle = (float) Math.sin(ang / 2.0);
+    float cosHalfAngle = (float) Math.cos(ang / 2.0);
+
+    float rx = k.x * sinHalfAngle;
+    float ry = k.y * sinHalfAngle;
+    float rz = k.z * sinHalfAngle;
+    float rw = cosHalfAngle;
+
+    float ix = rw * v.x + ry * v.z - rz * v.y;
+    float iy = rw * v.y + rz * v.x - rx * v.z;
+    float iz = rw * v.z + rx * v.y - ry * v.x;
+    float iw = -rx * v.x - ry * v.y - rz * v.z;
+
+    return new Vector3f(
+        ix * rw + iw * -rx + iy * -rz - iz * -ry,
+        iy * rw + iw * -ry + iz * -rx - ix * -rz,
+        iz * rw + iw * -rz + ix * -ry - iy * -rx
+    );
     }
 }
