@@ -63,7 +63,7 @@ public class Graphics3D {
         this.cameraDist = dist;
         this.windowX = windowW;
         this.windowY = windowH;
-        tr.setSize((int) windowW, (int) windowH);
+        tr.setViewSize((int) windowW, (int) windowH);
         /*System.out.println("cameraX : " + cameraX);
         System.out.println("cameraY : " + cameraY);
         System.out.println("cameraZ : " + cameraZ);
