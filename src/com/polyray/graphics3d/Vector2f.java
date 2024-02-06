@@ -57,6 +57,10 @@ public class Vector2f {
         return new Vector2f(-v.x, -v.y);
     }
 
+    public static Vector2f random() {
+        return Vector2f.normalize(new Vector2f((float) Math.random() - 0.5f, (float) Math.random() - 0.5f));
+    }
+
     public static float getSlope(Vector2f a, Vector2f b) {
         return (b.y - a.y) / (b.x - a.x);
     }
@@ -99,5 +103,5 @@ public class Vector2f {
     public String toString() {
         return "Vector2f: (" + this.x + ", " + this.y + ")";
     }
-    
+
 }
