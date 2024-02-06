@@ -7,6 +7,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsEnvironment;
+import java.awt.KeyboardFocusManager;
 import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -14,6 +15,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.image.BufferedImage;
+import java.util.Collections;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
@@ -23,6 +25,7 @@ public class Window extends JPanel {
     private final JFrame frame;
     private Dimension s;
     private int w, h;
+    private final GraphicsConfiguration gfxConfig = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration();
 
     /**
      * Creates a window
@@ -64,6 +67,8 @@ public class Window extends JPanel {
         frame.setSize(d);
         frame.setPreferredSize(d);
         if (fullscreen) {
+            setFocusTraversalKeysEnabled(false);
+            setFocusTraversalKeys(KeyboardFocusManager.FORWARD_TRAVERSAL_KEYS, Collections.emptySet());
             frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
         }
         frame.setDefaultCloseOperation(exitOnClose ? JFrame.EXIT_ON_CLOSE : JFrame.DISPOSE_ON_CLOSE);
@@ -118,7 +123,6 @@ public class Window extends JPanel {
      * Render the content from draw().
      */
     public void render() {
-        GraphicsConfiguration gfxConfig = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDefaultConfiguration();
         BufferedImage buffer = gfxConfig.createCompatibleImage(w, h);
         Graphics2D g = buffer.createGraphics();
         g.setColor(Color.BLACK);
