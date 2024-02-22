@@ -162,7 +162,8 @@ public class OBJLoader {
         colorPos.clear();
     }
 
-    public void loadOBJFile(File file, Vector3f translate, float scale) {
+    
+    public void loadOBJFile(File file, Vector3f translate, Vector3f scale) {
         if (!file.exists()) {
             return;
         }
@@ -221,7 +222,7 @@ public class OBJLoader {
                     float X = Float.parseFloat(x);
                     float Y = Float.parseFloat(y);
                     float Z = -Float.parseFloat(z);
-                    Vector3f v = Vector3f.add(new Vector3f(X * scale, Y * scale, Z * scale), translate);
+                    Vector3f v = Vector3f.add(new Vector3f(X * scale.x, Y * scale.y, Z * scale.z), translate);
                     vertices.add(v);
                 } else if (line.startsWith("vt ")) {
                     String data = line.replace("vt ", "");
