@@ -42,6 +42,14 @@ public class Window extends JPanel {
     public void addComponent(Component comp) {
         frame.add(comp);
     }
+    
+    public void setIcon(BufferedImage icon) {
+        frame.setIconImage(icon);
+    }
+    
+    public void setPosition(int x, int y) {
+        frame.setLocation(x,y);
+    }
 
     /**
      * Creates and initialises a frame.
