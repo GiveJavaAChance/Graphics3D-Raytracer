@@ -1,6 +1,21 @@
 # Graphics3D
 Graphics3D isn't just about 3D graphics; it's an ambitious project aimed at significantly enhancing the speed and performance of graphics in java. This project has been in active development for several months, witnessing numerous enhancements and advancements. It's a work in progress, and the development won't stop untill peak performance has been reached.
 
+## Tools and Features
+Graphics3D also comes with a bunch of usefull tools and classes such as Vectors, hitboxes, colors, 3D model loaders (STL and OBJ with textures) and that list is only added to.
+
+### Things that will be added are:
+###### Perlin noise (2D and 3D),
+###### 2D Hitboxes,
+###### A Sound Engine that includes a bunch of common effects,
+###### "Pixel Sandbox Physics",
+###### Icosphere generator,
+###### Verlet Integrated Physics (2D and 3D) using quad and octtrees (includes spring physics),
+###### Lightning Bolt generators (2D and 3D),
+###### Java MIDI sound player data structure and handler,
+###### Multiplayer integration using JavaScript server,
+###### STL file writer
+
 ## Raytracer
 Additionally, this project incorporates a raytracer, a significant work in progress. The current primary focus is to optimize it for GPU utilization, which promises substantial speed improvements over the current multithreadded CPU processing.
 
