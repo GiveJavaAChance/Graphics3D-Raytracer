@@ -57,6 +57,14 @@ public class Vector2f {
         return new Vector2f(-v.x, -v.y);
     }
 
+    public static Vector2f min(Vector2f a, Vector2f b) {
+        return new Vector2f(Math.min(a.x, b.x), Math.min(a.y, b.y));
+    }
+
+    public static Vector2f max(Vector2f a, Vector2f b) {
+        return new Vector2f(Math.max(a.x, b.x), Math.max(a.y, b.y));
+    }
+
     public static Vector2f random() {
         return Vector2f.normalize(new Vector2f((float) Math.random() - 0.5f, (float) Math.random() - 0.5f));
     }
@@ -65,7 +73,30 @@ public class Vector2f {
         return (b.y - a.y) / (b.x - a.x);
     }
 
+    @Deprecated
+    /**
+     * Use {@Code intersectOnLines} that is more reliable and more performant instead
+     */
     public static Vector2f intersect(Vector2f a1, Vector2f b1, Vector2f a2, Vector2f b2) {
+        boolean i1 = a1.x == b1.x;
+        boolean i2 = a2.x == b2.x;
+        if (i1 && i2) {
+            if (a1.x == a2.x) {
+                return new Vector2f(a1.x, Math.min(Math.min(a1.y, b1.y), Math.min(a2.y, b2.y)));
+            } else {
+                return null;
+            }
+        } else if (i1) {
+            float slope = getSlope(a2, b2);
+            float X = a1.x;
+            float Y = slope * (X - a2.x) + a2.y;
+            return new Vector2f(X, Y);
+        } else if (i2) {
+            float slope = getSlope(a1, b1);
+            float X = a2.x;
+            float Y = slope * (X - a1.x) + a1.y;
+            return new Vector2f(X, Y);
+        }
         float slope1 = getSlope(a1, b1);
         float slope2 = getSlope(a2, b2);
         float a = slope1 * a1.x;
@@ -77,6 +108,26 @@ public class Vector2f {
         return new Vector2f(X, Y);
     }
 
+    public static Vector2f intersectOnLines(Vector2f a1, Vector2f b1, Vector2f a2, Vector2f b2) {
+        float dx1 = a1.x - b1.x;
+        float dx2 = a1.x - a2.x;
+        float dx3 = a2.x - b2.x;
+        float dy1 = a1.y - b1.y;
+        float dy2 = a1.y - a2.y;
+        float dy3 = a2.y - b2.y;
+        float k = dx1 * dy3 - dy1 * dx3;
+        float t = (dx2 * dy3 - dy2 * dx3) / k;
+        float u = (dx1 * dy2 - dy1 * dx2) / k;
+        if (t >= 0.0f && t <= 1.0f && u >= 0.0f && u <= 1.0f) {
+            return Vector2f.lerp(a1, b1, t);
+        }
+        return null;
+    }
+
+    @Deprecated
+    /**
+     * Use {@Code getPositionOnPlane} that is more accurate, precise and gives negative positions as well
+     */
     public static Vector2f getPositionRelativeTo(Vector2f a, Vector2f b, Vector2f pos) {
         float slope1 = getSlope(a, b);
         float slope2 = -1.0f / slope1;
@@ -97,6 +148,18 @@ public class Vector2f {
             X = -X;
         }
         return new Vector2f(X, Y);
+    }
+    
+    public static Vector2f getPositionOnPlane(Vector2f xDir,Vector2f yDir, Vector2f pos) {
+        float X = dot(pos,xDir);
+        float Y = dot(pos,yDir);
+        return new Vector2f(X,Y);
+    }
+    
+    public static Vector2f getPositionOnPlane(Vector2f yDir, Vector2f pos) {
+        float X = dot(pos,new Vector2f(yDir.y,-yDir.x));
+        float Y = dot(pos,yDir);
+        return new Vector2f(X,Y);
     }
 
     @Override
