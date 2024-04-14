@@ -2,8 +2,10 @@ package com.polyray.graphics3d;
 
 import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Composite;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
+import java.awt.Paint;
 import java.awt.Polygon;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -14,8 +16,9 @@ import java.util.Comparator;
 public class Graphics3D {
 
     public static final int PRIOAXIS_X = 0, PRIOAXIS_Y = 1, PRIOAXIS_Z = 2;
+    private final RenderingHints QUALITY, FAST;
     public float cameraX = 0.0f, cameraY = 0.0f, cameraZ = 0.0f, cameraDist = 100.0f, minRendDist = 1.0f, renderDist = 1000.0f;
-    private float windowX, windowY, renderTime;
+    private float windowX, windowY, renderTime, preCameraDepthZ;
     public int prioAxis = 2, verticesRendered = 0, totalVertices = 0;
     public Color color = Color.BLACK;
     public final ArrayList<Graphics3DObject> objects = new ArrayList<>();
@@ -23,8 +26,49 @@ public class Graphics3D {
     private Graphics3DObject polygon = new Graphics3DObject();
     private final Rotator r = new Rotator();
     private Vector3f ang = new Vector3f(0.0f, 0.0f, 0.0f);
-    private Transform tr = new Transform();
+    private double[] rotationMatrix = new double[6];
+    private final Transform tr = new Transform();
     public float RTime, ZTime, REMTime, STime, DTime;
+
+    public Graphics3D() {
+        FAST = new RenderingHints(RenderingHints.KEY_ALPHA_INTERPOLATION,
+                RenderingHints.VALUE_ALPHA_INTERPOLATION_SPEED);
+        FAST.put(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_OFF);
+        FAST.put(RenderingHints.KEY_RENDERING,
+                RenderingHints.VALUE_RENDER_SPEED);
+        FAST.put(RenderingHints.KEY_DITHERING,
+                RenderingHints.VALUE_DITHER_DISABLE);
+        FAST.put(RenderingHints.KEY_FRACTIONALMETRICS,
+                RenderingHints.VALUE_FRACTIONALMETRICS_OFF);
+        FAST.put(RenderingHints.KEY_COLOR_RENDERING,
+                RenderingHints.VALUE_COLOR_RENDER_SPEED);
+        FAST.put(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        FAST.put(RenderingHints.KEY_STROKE_CONTROL,
+                RenderingHints.VALUE_STROKE_PURE);
+        FAST.put(RenderingHints.KEY_TEXT_ANTIALIASING,
+                RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
+        QUALITY = new RenderingHints(RenderingHints.KEY_ALPHA_INTERPOLATION,
+                RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
+        QUALITY.put(RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+        QUALITY.put(RenderingHints.KEY_RENDERING,
+                RenderingHints.VALUE_RENDER_QUALITY);
+        QUALITY.put(RenderingHints.KEY_DITHERING,
+                RenderingHints.VALUE_DITHER_ENABLE);
+        QUALITY.put(RenderingHints.KEY_FRACTIONALMETRICS,
+                RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+        QUALITY.put(RenderingHints.KEY_COLOR_RENDERING,
+                RenderingHints.VALUE_COLOR_RENDER_QUALITY);
+        QUALITY.put(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        QUALITY.put(RenderingHints.KEY_STROKE_CONTROL,
+                RenderingHints.VALUE_STROKE_NORMALIZE);
+        QUALITY.put(RenderingHints.KEY_TEXT_ANTIALIASING,
+                RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+    }
 
     /**
      * Sets up the renderer
@@ -61,6 +105,7 @@ public class Graphics3D {
         this.cameraY = y;
         this.cameraZ = z;
         this.cameraDist = dist;
+        this.preCameraDepthZ = dist - z;
         this.windowX = windowW;
         this.windowY = windowH;
         tr.setViewSize((int) windowW, (int) windowH);
@@ -74,6 +119,7 @@ public class Graphics3D {
 
     public void rotate(Vector3f ang) {
         this.ang = Vector3f.add(this.ang, ang);
+        updateMatrix();
     }
 
     /**
@@ -83,6 +129,7 @@ public class Graphics3D {
      */
     public void rotateX(double ang) {
         this.ang = new Vector3f(this.ang.x + (float) ang, this.ang.y, this.ang.z);
+        updateMatrix();
     }
 
     /**
@@ -92,6 +139,7 @@ public class Graphics3D {
      */
     public void rotateY(double ang) {
         this.ang = new Vector3f(this.ang.x, this.ang.y + (float) ang, this.ang.z);
+        updateMatrix();
     }
 
     /**
@@ -101,6 +149,7 @@ public class Graphics3D {
      */
     public void rotateZ(double ang) {
         this.ang = new Vector3f(this.ang.x, this.ang.y, this.ang.z + (float) ang);
+        updateMatrix();
     }
 
     /**
@@ -110,6 +159,16 @@ public class Graphics3D {
      */
     public void setAngle(Vector3f ang) {
         this.ang = ang;
+        updateMatrix();
+    }
+
+    private void updateMatrix() {
+        rotationMatrix[0] = Math.sin(ang.x);
+        rotationMatrix[1] = Math.cos(ang.x);
+        rotationMatrix[2] = Math.sin(ang.y);
+        rotationMatrix[3] = Math.cos(ang.y);
+        rotationMatrix[4] = Math.sin(ang.z);
+        rotationMatrix[5] = Math.cos(ang.z);
     }
 
     /**
@@ -206,48 +265,11 @@ public class Graphics3D {
      */
     public void render(Graphics2D g2d, boolean quality) {
         long startTime = System.nanoTime();
-        RenderingHints rh;
-        if (!quality) {
-            rh = new RenderingHints(RenderingHints.KEY_ALPHA_INTERPOLATION,
-                    RenderingHints.VALUE_ALPHA_INTERPOLATION_SPEED);
-            rh.put(RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_OFF);
-            rh.put(RenderingHints.KEY_RENDERING,
-                    RenderingHints.VALUE_RENDER_SPEED);
-            rh.put(RenderingHints.KEY_DITHERING,
-                    RenderingHints.VALUE_DITHER_DISABLE);
-            rh.put(RenderingHints.KEY_FRACTIONALMETRICS,
-                    RenderingHints.VALUE_FRACTIONALMETRICS_OFF);
-            rh.put(RenderingHints.KEY_COLOR_RENDERING,
-                    RenderingHints.VALUE_COLOR_RENDER_SPEED);
-            rh.put(RenderingHints.KEY_INTERPOLATION,
-                    RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
-            rh.put(RenderingHints.KEY_STROKE_CONTROL,
-                    RenderingHints.VALUE_STROKE_PURE);
-            rh.put(RenderingHints.KEY_TEXT_ANTIALIASING,
-                    RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
+        if (quality) {
+            g2d.setRenderingHints(QUALITY);
         } else {
-            rh = new RenderingHints(RenderingHints.KEY_ALPHA_INTERPOLATION,
-                    RenderingHints.VALUE_ALPHA_INTERPOLATION_QUALITY);
-            rh.put(RenderingHints.KEY_ANTIALIASING,
-                    RenderingHints.VALUE_ANTIALIAS_ON);
-            rh.put(RenderingHints.KEY_RENDERING,
-                    RenderingHints.VALUE_RENDER_QUALITY);
-            rh.put(RenderingHints.KEY_DITHERING,
-                    RenderingHints.VALUE_DITHER_ENABLE);
-            rh.put(RenderingHints.KEY_FRACTIONALMETRICS,
-                    RenderingHints.VALUE_FRACTIONALMETRICS_ON);
-            rh.put(RenderingHints.KEY_COLOR_RENDERING,
-                    RenderingHints.VALUE_COLOR_RENDER_QUALITY);
-            rh.put(RenderingHints.KEY_INTERPOLATION,
-                    RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-            rh.put(RenderingHints.KEY_STROKE_CONTROL,
-                    RenderingHints.VALUE_STROKE_NORMALIZE);
-            rh.put(RenderingHints.KEY_TEXT_ANTIALIASING,
-                    RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g2d.setRenderingHints(FAST);
         }
-        g2d.setRenderingHints(rh);
-
         // Rotate
         ArrayList<Graphics3DObject> rCopy = new ArrayList<>(rotated);
         Thread t = new Thread(() -> {
@@ -262,12 +284,12 @@ public class Graphics3D {
                 }
                 if (obj.gradient) {
                     for (int i = 0; i < obj.vertices.size(); i++) {
-                        newObject.addVertex(r.calcRot(obj.vertices.get(i), ang, prioAxis), obj.colors.get(i));
+                        newObject.addVertex(applyRotation(obj.vertices.get(i)), obj.colors.get(i));
                     }
                 } else {
                     for (Vector3f v : obj.vertices) {
                         totalVertices++;
-                        newObject.addVertex(r.calcRot(v, ang, prioAxis), obj.radius);
+                        newObject.addVertex(applyRotation(v), obj.radius);
                     }
                 }
                 rotated.add(newObject);
@@ -284,7 +306,7 @@ public class Graphics3D {
             Graphics3DObject obj = rCopy.get(i);
             if (!obj.vertices.isEmpty()) {
                 Vector3f center = obj.centerOfMass();
-                dist[i] = getZDepth(center);
+                dist[i] = preCameraDepthZ - center.z;
                 // Cache depth to avoid recalculating
                 obj.setDepth(dist[i]);
             }
@@ -326,9 +348,9 @@ public class Graphics3D {
                     Vector3f v0 = obj.vertices.get((j + vLen - 1) % vLen);
                     Vector3f v1 = obj.vertices.get(j);
                     Vector3f v2 = obj.vertices.get((j + 1) % vLen);
-                    boolean z0 = getZDepth(v0) > minRendDist;
-                    boolean z1 = getZDepth(v1) > minRendDist;
-                    boolean z2 = getZDepth(v2) > minRendDist;
+                    boolean z0 = preCameraDepthZ - v0.z > minRendDist;
+                    boolean z1 = preCameraDepthZ - v1.z > minRendDist;
+                    boolean z2 = preCameraDepthZ - v2.z > minRendDist;
                     if (j == 0) {
                         prevZ1 = z0;
                     }
@@ -399,8 +421,7 @@ public class Graphics3D {
                         g2d.drawImage(img, minX, minY, null);
                     }
                 } else if (obj.gradient) { // Is made of multiple colors
-                    BufferedImage image = gradientPolygon(veci, obj.getColors(), obj.fill);
-                    g2d.drawImage(image, 0, 0, null);
+                    gradientPolygon(veci, obj.getColors(), obj.fill, g2d);
                 } else { // Single color
                     if (veci.length > 2) { // Closes the polygon
                         Polygon p = new Polygon();
@@ -439,82 +460,70 @@ public class Graphics3D {
         DTime = (endTime - sTime) / 1000000.0f;
     }
 
-    private BufferedImage gradientPolygon(Vector2f[] p, Color[] colors, boolean fill) {
+    private void gradientPolygon(Vector2f[] p, Color[] colors, boolean fill, Graphics2D g) {
         if (p.length > colors.length || p.length == 0) {
-            return null;
+            return;
         }
-        float minX = Float.MAX_VALUE, minY = Float.MAX_VALUE;
-        float maxX = Float.MIN_VALUE, maxY = Float.MIN_VALUE;
-        for (Vector2f v : p) {
-            minX = Math.min(minX, v.x);
-            minY = Math.min(minY, v.y);
-            maxX = Math.max(maxX, v.x);
-            maxY = Math.max(maxY, v.y);
-        }
-
-        int w = (int) Math.ceil(maxX - minX);
-        int h = (int) Math.ceil(maxY - minY);
+        Paint paint = g.getPaint();
         if (p.length == 2) {
-            BufferedImage img = new BufferedImage((int) maxX + 1, (int) maxY + 1, BufferedImage.TYPE_INT_ARGB);
             float x1 = p[0].x;
             float y1 = p[0].y;
             float x2 = p[1].x;
             float y2 = p[1].y;
             GradientPaint gradient = new GradientPaint(x1, y1, colors[0], x2, y2, colors[1]);
-            Graphics2D g = img.createGraphics();
             g.setPaint(gradient);
             g.drawLine((int) x1, (int) y1, (int) x2, (int) y2);
-            return img;
-        }
-        BufferedImage tmp = new BufferedImage((int) Math.min(minX + w + 1, windowX), (int) Math.min(minY + h + 1, windowY), BufferedImage.TYPE_INT_ARGB);
-        Polygon poly = new Polygon();
-        for (Vector2f p1 : p) {
-            poly.addPoint((int) (p1.x - minX), (int) (p1.y - minY));
-        }
-        Graphics2D g = tmp.createGraphics();
-        for (int i = 0; i < (int) Math.ceil(p.length / 2.0f); i++) {
-            float x1 = p[i].x - minX;
-            float y1 = p[i].y - minY;
-            float x2 = p[i + (int) Math.ceil((p.length - 1.0f) / 2.0f)].x - minX;
-            float y2 = p[i + (int) Math.ceil((p.length - 1.0f) / 2.0f)].y - minY;
-            Color c1 = colors[i];
-            Color c2 = colors[i + (int) Math.ceil((p.length - 1.0f) / 2.0f)];
-            int alpha = (int) (255.0f / p.length); // Adjust alpha based on the number of shapes
-            Color a = new Color(c1.getRed(), c1.getGreen(), c1.getBlue());
-            Color b = new Color(c2.getRed(), c2.getGreen(), c2.getBlue());
-            GradientPaint gradient = new GradientPaint(x1, y1, a, x2, y2, b);
-
-            // Apply alpha compositing
-            AlphaComposite alphaComposite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f);
-            g.setComposite(alphaComposite);
-
-            g.setPaint(gradient);
-            if (fill) {
-                g.fill(poly);
-            } else {
-                g.draw(poly);
+        } else {
+            Polygon poly = new Polygon();
+            for (Vector2f p1 : p) {
+                poly.addPoint((int) p1.x, (int) p1.y);
             }
+            Composite comp = g.getComposite();
+            AlphaComposite alphaComposite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0f / p.length);
+            g.setComposite(alphaComposite);
+            for (int i = 0; i < p.length - 1; i++) {
+                for (int j = i + 1; j < p.length; j++) {
+                    GradientPaint gradient = new GradientPaint(p[i].x, p[i].y, colors[i], p[j].x, p[j].y, colors[j]);
+                    g.setPaint(gradient);
+                    if (fill) {
+                        g.fill(poly);
+                    } else {
+                        g.draw(poly);
+                    }
+                }
+            }
+            /*for (int i = 0; i < (int) Math.ceil(p.length / 2.0f); i++) {
+                float x1 = p[i].x;
+                float y1 = p[i].y;
+                float x2 = p[i + (int) Math.ceil((p.length - 1.0f) / 2.0f)].x;
+                float y2 = p[i + (int) Math.ceil((p.length - 1.0f) / 2.0f)].y;
+                Color c1 = colors[i];
+                Color c2 = colors[i + (int) Math.ceil((p.length - 1.0f) / 2.0f)];
+                GradientPaint gradient = new GradientPaint(x1, y1, c1, x2, y2, c2);
+                g.setPaint(gradient);
+                if (fill) {
+                    g.fill(poly);
+                } else {
+                    g.draw(poly);
+                }
+            }*/
+            g.setComposite(comp);
         }
-        g.dispose();
-        BufferedImage out = new BufferedImage((int) windowX, (int) windowY, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2d = out.createGraphics();
-        g2d.drawImage(tmp, (int) minX, (int) minY, null);
-        g2d.dispose();
-        return out;
+        g.setPaint(paint);
     }
 
     private Vector2f tryProject(Vector3f pos, Vector3f to, boolean single) {
-        float t = getZDepth(pos);
+        float t = preCameraDepthZ - pos.z;
         Vector2f vec = null;
         if (single) {
             if (t > minRendDist) {
                 try {
-                    vec = (Vector2f) project2D(pos);
+                    vec = project2D(pos);
                 } catch (ProjectionException ex) {
                 }
             }
         } else {
-            if (t <= minRendDist && getZDepth(to) <= minRendDist) {
+            if (t <= minRendDist && preCameraDepthZ - to.z <= minRendDist) {
                 return null;
             }
             /*Vector3f delta = Vector3f.sub(pos, prev);
@@ -535,7 +544,7 @@ public class Graphics3D {
                 pos = Vector3f.sub(pos, Vector3f.mul(delta, k));
             }
             try {
-                vec = (Vector2f) project2D(pos);
+                vec = project2D(pos);
             } catch (ProjectionException ex) {
             }
         }
@@ -668,7 +677,7 @@ public class Graphics3D {
 
     private boolean isForward(Graphics3DObject obj) {
         for (Vector3f v : obj.vertices) {
-            if (getZDepth(v) > minRendDist) {
+            if (preCameraDepthZ - v.z > minRendDist) {
                 return true;
             }
         }
@@ -905,13 +914,14 @@ public class Graphics3D {
     }
 
     private Vector2f project2D(Vector3f v) throws ProjectionException {
-        float x1 = ((cameraDist * v.x) / (cameraDist - (v.z + cameraZ))) - cameraX;
-        float y1 = ((cameraDist * v.y) / (cameraDist - (v.z + cameraZ))) - cameraY;
-        if ((cameraDist - (v.z + cameraZ)) > minRendDist) {
+        float t = preCameraDepthZ - v.z;
+        if (t > minRendDist) {
+            float x1 = ((cameraDist * v.x) / t) - cameraX;
+            float y1 = ((cameraDist * v.y) / t) - cameraY;
             return new Vector2f(x1, y1);
         } else {
-            String errorMessage = "Could not project with t = " + (cameraDist - (v.z + cameraZ))
-                    + " for position v(" + v.x + ", " + v.y + ", " + v.z + ")"
+            String errorMessage = "Could not project with t = " + t
+                    + " for position " + v.toString()
                     + ". Camera parameters: cameraDist=" + cameraDist
                     + ", cameraZ=" + cameraZ
                     + ". minRendDist=" + minRendDist;
@@ -1044,12 +1054,11 @@ public class Graphics3D {
     }
 
     private float getZDepth(Vector3f v) {
-        return (float) (cameraDist - (v.z + cameraZ));
+        return preCameraDepthZ - v.z;
     }
 
     public float calcZDepth(Vector3f v) {
-        Vector3f rot = r.calcRot(v, ang, prioAxis);
-        return getZDepth(rot);
+        return getZDepth(applyRotation(v));
     }
 
     private float calcPointRadius(Vector3f v, float radius) {
@@ -1062,6 +1071,69 @@ public class Graphics3D {
             }
         }
         return 0.0f;
+    }
+
+    private Vector3f applyRotation(Vector3f v) {
+        switch (prioAxis) {
+            case 0 -> {
+                // Y
+                Vector3f out = new Vector3f(
+                        (float) (rotationMatrix[3] * v.x + rotationMatrix[2] * v.z),
+                        v.y,
+                        (float) (rotationMatrix[3] * v.z - rotationMatrix[2] * v.x)
+                );
+
+                // Z
+                float nx = (float) (rotationMatrix[5] * out.x - rotationMatrix[4] * out.y);
+                out.y = (float) (rotationMatrix[4] * out.x + rotationMatrix[5] * out.y);
+                out.x = nx;
+
+                // X
+                float ny = (float) (rotationMatrix[1] * out.y - rotationMatrix[0] * out.z);
+                out.z = (float) (rotationMatrix[0] * out.y + rotationMatrix[1] * out.z);
+                out.y = ny;
+                return out;
+            }
+            
+            case 1 -> {
+                // Z
+                Vector3f out = new Vector3f(
+                        (float) (rotationMatrix[5] * v.x - rotationMatrix[4] * v.y),
+                        (float) (rotationMatrix[4] * v.x + rotationMatrix[5] * v.y),
+                        v.z
+                );
+
+                // X
+                float ny = (float) (rotationMatrix[1] * out.y - rotationMatrix[0] * out.z);
+                out.z = (float) (rotationMatrix[0] * out.y + rotationMatrix[1] * out.z);
+                out.y = ny;
+                // Y
+                float nx = (float) (rotationMatrix[3] * out.x + rotationMatrix[2] * out.z);
+                out.z = (float) (rotationMatrix[3] * out.z - rotationMatrix[2] * out.x);
+                out.x = nx;
+                return out;
+            }
+            
+            case 2 -> {
+                // X
+                Vector3f out = new Vector3f(
+                        v.x,
+                        (float) (rotationMatrix[1] * v.y - rotationMatrix[0] * v.z),
+                        (float) (rotationMatrix[0] * v.y + rotationMatrix[1] * v.z)
+                );
+
+                // Y
+                float nx = (float) (rotationMatrix[3] * out.x + rotationMatrix[2] * out.z);
+                out.z = (float) (rotationMatrix[3] * out.z - rotationMatrix[2] * out.x);
+                out.x = nx;
+                // Z
+                nx = (float) (rotationMatrix[5] * out.x - rotationMatrix[4] * out.y);
+                out.y = (float) (rotationMatrix[4] * out.x + rotationMatrix[5] * out.y);
+                out.x = nx;
+                return out;
+            }
+        }
+        return new Vector3f();
     }
 
     // Legacy:
