@@ -4,7 +4,7 @@ import java.awt.Color;
 
 public class ColorObject {
 
-    float R, G, B;
+    public float R, G, B;
 
     public ColorObject(float R, float G, float B) {
         this.R = R;
