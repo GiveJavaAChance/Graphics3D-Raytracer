@@ -2,7 +2,6 @@ package com.polyray.graphics3d;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Polygon;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.awt.image.WritableRaster;
@@ -127,39 +126,49 @@ public class Transform {
             H = H - (minY + H - wHeight);
         }
         if (W > 0 && H > 0) {
+            x1 -= minX;
+            y1 -= minY;
+            x2 -= minX;
+            y2 -= minY;
+            x3 -= minX;
+            y3 -= minY;
+            x4 -= minX;
+            y4 -= minY;
             final int nWidth = W;
             final int nHeight = H;
             BufferedImage imageOut = new BufferedImage(nWidth, nHeight, BufferedImage.TYPE_INT_ARGB);
             Graphics2D g = imageOut.createGraphics();
+            float dx1 = (float) (x4 - x1) / height;
+            float dy1 = (float) (y4 - y1) / height;
+            float dx2 = (float) (x3 - x2) / height;
+            float dy2 = (float) (y3 - y2) / height;
             for (int y = 0; y < height; y++) {
-                float dy = (float) y / height;
-                float p1x = x1 + (x4 - x1) * dy;
-                float p1y = y1 + (y4 - y1) * dy;
-                float p2x = x2 + (x3 - x2) * dy;
-                float p2y = y2 + (y3 - y2) * dy;
-                float dy1 = (float) (y + 1.0f) / height;
-                float p3x = x1 + (x4 - x1) * dy1;
-                float p3y = y1 + (y4 - y1) * dy1;
-                float p4x = x2 + (x3 - x2) * dy1;
-                float p4y = y2 + (y3 - y2) * dy1;
+                float p1x = x1 + dx1 * y;
+                float p1y = y1 + dy1 * y;
+                float p2x = x2 + dx2 * y;
+                float p2y = y2 + dy2 * y;
+                float kx1 = (p2x - p1x) / width;
+                float ky1 = (p2y - p1y) / width;
+                float p3x = x1 + dx1 * (y + 1.0f);
+                float p3y = y1 + dy1 * (y + 1.0f);
+                float p4x = x2 + dx2 * (y + 1.0f);
+                float p4y = y2 + dy2 * (y + 1.0f);
+                float kx2 = (p4x - p3x) / width;
+                float ky2 = (p4y - p3y) / width;
                 for (int x = 0; x < width; x++) {
-                    float dx = (float) x / width;
-                    int ppx1 = (int) (p1x + (p2x - p1x) * dx) - minX;
-                    int ppy1 = (int) (p1y + (p2y - p1y) * dx) - minY;
-                    int ppx2 = (int) (p3x + (p4x - p3x) * dx) - minX;
-                    int ppy2 = (int) (p3y + (p4y - p3y) * dx) - minY;
-                    float dx1 = (float) (x + 1.0f) / width;
-                    int ppx3 = (int) (p1x + (p2x - p1x) * dx1) - minX;
-                    int ppy3 = (int) (p1y + (p2y - p1y) * dx1) - minY;
-                    int ppx4 = (int) (p3x + (p4x - p3x) * dx1) - minX;
-                    int ppy4 = (int) (p3y + (p4y - p3y) * dx1) - minY;
-                    Polygon p = new Polygon();
-                    p.addPoint(ppx1, ppy1);
-                    p.addPoint(ppx3, ppy3);
-                    p.addPoint(ppx4, ppy4);
-                    p.addPoint(ppx2, ppy2);
+                    int[] Xcomp = new int[4];
+                    int[] Ycomp = new int[4];
+                    Xcomp[0] = (int) (p1x + kx1 * x);
+                    Ycomp[0] = (int) (p1y + ky1 * x);
+                    Xcomp[1] = (int) (p3x + kx2 * x);
+                    Ycomp[1] = (int) (p3y + ky2 * x);
+                    // Flip order for square
+                    Xcomp[3] = (int) (p1x + kx1 * (x + 1.0f));
+                    Ycomp[3] = (int) (p1y + ky1 * (x + 1.0f));
+                    Xcomp[2] = (int) (p3x + kx2 * (x + 1.0f));
+                    Ycomp[2] = (int) (p3y + ky2 * (x + 1.0f));
                     g.setColor(new Color(image.getRGB(x, y)));
-                    g.fillPolygon(p);
+                    g.fillPolygon(Xcomp, Ycomp, 4);
                 }
             }
             return imageOut;
