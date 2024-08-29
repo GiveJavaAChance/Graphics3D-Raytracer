@@ -1,5 +1,7 @@
 package com.polyray.graphics3d;
 
+import java.util.Objects;
+
 public class Vector3f {
 
     public float x;
@@ -75,6 +77,25 @@ public class Vector3f {
     @Override
     public String toString() {
         return "Vector3f: (" + this.x + ", " + this.y + ", " + this.z + ")";
+    }
+    
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null) {
+            return false;
+        }
+        if (o instanceof Vector3f v) {
+            return !(v.x != this.x || v.y != this.y || v.z == this.z);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.x, this.y, this.z);
     }
 
 }
