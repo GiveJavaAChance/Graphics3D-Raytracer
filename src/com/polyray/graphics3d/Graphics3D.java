@@ -67,7 +67,7 @@ public class Graphics3D {
                 RenderingHints.VALUE_STROKE_NORMALIZE);
         QUALITY.put(RenderingHints.KEY_TEXT_ANTIALIASING,
                 RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-
+        updateMatrix();
     }
 
     /**
@@ -341,7 +341,6 @@ public class Graphics3D {
             g2d.setColor(obj.c);
             int vLen = obj.vertices.size();
             ArrayList<Vector2f> projected = new ArrayList<>();
-            int off = 0;
             if (obj.vertices.size() > 1) {
                 boolean prevZ1 = false;
                 for (int j = 0; j < vLen; j++) {
@@ -356,23 +355,38 @@ public class Graphics3D {
                     }
                     if (!z1) {
                         if (z0 && !z2) {  // If right neighbour is inside -> move towards it
-                            projected.add(tryProject(v1, v0, false));
+                            Vector2f p = tryProject(v1, v0, false);
+                            if (p != null) {
+                                projected.add(p);
+                            }
                         } else if (!z0 && z2) {  // If left neighbour is inside -> move towards it
-                            projected.add(tryProject(v1, v2, false));
+                            Vector2f p = tryProject(v1, v2, false);
+                            if (p != null) {
+                                projected.add(p);
+                            }
                         } else if (z0 && z2) { // If both neighbours are inside -> :
                             if (!prevZ1) { // If the previous "current" was outside -> move to the left neighbour
-                                projected.add(tryProject(v1, v0, false));
-                            } else if (prevZ1) { // If the previus "current" was inside -> split up to 2 points and move towards each neighbour
-                                projected.add(tryProject(v1, v0, false));
-                                projected.add(tryProject(v1, v2, false));
-                                off++;
+                                Vector2f p = tryProject(v1, v0, false);
+                                if (p != null) {
+                                    projected.add(p);
+                                }
+                            } else { // If the previus "current" was inside -> split up to 2 points and move towards each neighbour
+                                Vector2f p0 = tryProject(v1, v0, false);
+                                if (p0 != null) {
+                                    projected.add(p0);
+                                }
+                                Vector2f p1 = tryProject(v1, v2, false);
+                                if (p1 != null) {
+                                    projected.add(p1);
+                                }
                             }
-                        } else if (!z0 && !z2) { // If both neighbours are outside -> remove current
-                            projected.add(null);
                         }
                     } else {
                         try {
-                            projected.add(project2D(v1));
+                            Vector2f p = project2D(v1);
+                            if (p != null) {
+                                projected.add(p);
+                            }
                         } catch (ProjectionException ex) {
                         }
                     }
@@ -385,7 +399,16 @@ public class Graphics3D {
                 vec[i][j] = tryProject(rotated, prev, false);
                 }*/
             } else {
-                projected.add(tryProject(obj.vertices.get(0), null, true));
+                try {
+                    Vector2f p = project2D(obj.vertices.get(0));
+                    if (p != null) {
+                        projected.add(p);
+                    }
+                } catch (ProjectionException ex) {
+                }
+            }
+            if (projected.isEmpty()) {
+                continue;
             }
             Vector2f[] veci = projected.toArray(Vector2f[]::new);
             boolean allXBelowZero = true;
@@ -394,26 +417,24 @@ public class Graphics3D {
             boolean allYAboveWindowY = true;
 
             for (Vector2f v : veci) {
-                if (v != null) {
-                    if (v.x >= 0) {
-                        allXBelowZero = false;
-                    }
-                    if (v.x <= windowX) {
-                        allXAboveWindowX = false;
-                    }
-                    if (v.y >= 0) {
-                        allYBelowZero = false;
-                    }
-                    if (v.y <= windowY) {
-                        allYAboveWindowY = false;
-                    }
+                if (v.x >= 0) {
+                    allXBelowZero = false;
+                }
+                if (v.x <= windowX) {
+                    allXAboveWindowX = false;
+                }
+                if (v.y >= 0) {
+                    allYBelowZero = false;
+                }
+                if (v.y <= windowY) {
+                    allYAboveWindowY = false;
                 }
             }
             if (allXBelowZero || allXAboveWindowX || allYBelowZero || allYAboveWindowY) {
                 continue;
             }
             if (veci.length > 1) { // Consolidated the polygon creation logic
-                if (obj.hasTexture && veci.length == 4 && veci[0] != null && veci[1] != null && veci[2] != null && veci[3] != null) { // Has a texture
+                if (obj.hasTexture && veci.length == 4) { // Has a texture
                     BufferedImage img = tr.rectToQuad(obj.texture, (int) veci[0].x, (int) veci[0].y, (int) veci[1].x, (int) veci[1].y, (int) veci[2].x, (int) veci[2].y, (int) veci[3].x, (int) veci[3].y);
                     int minX = tr.minX;
                     int minY = tr.minY;
@@ -424,23 +445,24 @@ public class Graphics3D {
                     gradientPolygon(veci, obj.getColors(), obj.fill, g2d);
                 } else { // Single color
                     if (veci.length > 2) { // Closes the polygon
-                        Polygon p = new Polygon();
+                        int[] xp = new int[veci.length];
+                        int[] yp = new int[veci.length];
+                        int len = 0;
                         for (Vector2f v : veci) {
-                            if (v != null) {
-                                p.addPoint((int) v.x, (int) v.y);
-                                verticesRendered++;
-                            }
+                            xp[len] = (int) v.x;
+                            yp[len++] = (int) v.y;
                         }
+                        verticesRendered += len;
                         if (obj.fill) {
-                            g2d.fill(p);
+                            g2d.fillPolygon(xp, yp, len);
                         } else {
-                            g2d.draw(p);
+                            g2d.drawPolygon(xp, yp, len);
                         }
-                    } else if (veci[0] != null && veci[1] != null) {  // If it's a line
+                    } else {  // If it's a line
                         g2d.drawLine((int) veci[0].x, (int) veci[0].y, (int) veci[1].x, (int) veci[1].y);
                     }
                 }
-            } else if (veci[0] != null) { // Draw a circle if only one point exists
+            } else { // Draw a circle if only one point exists
                 float radius = calcPointRadius(obj.vertices.get(0), obj.radius);
                 int rx = (int) (veci[0].x - radius / 2.0f);
                 int ry = (int) (veci[0].y - radius / 2.0f);
@@ -1062,13 +1084,9 @@ public class Graphics3D {
     }
 
     private float calcPointRadius(Vector3f v, float radius) {
-        if (getZDepth(v) > minRendDist) {
-            try {
-                Vector2f v1 = project2D(v);
-                Vector2f v2 = project2D(new Vector3f(v.x + radius, v.y, v.z));
-                return Vector2f.length(Vector2f.sub(v1, v2));
-            } catch (ProjectionException ex) {
-            }
+        float t = preCameraDepthZ - v.z;
+        if (t > minRendDist) {
+            return cameraDist * radius / t;
         }
         return 0.0f;
     }
@@ -1094,7 +1112,7 @@ public class Graphics3D {
                 out.y = ny;
                 return out;
             }
-            
+
             case 1 -> {
                 // Z
                 Vector3f out = new Vector3f(
@@ -1113,7 +1131,7 @@ public class Graphics3D {
                 out.x = nx;
                 return out;
             }
-            
+
             case 2 -> {
                 // X
                 Vector3f out = new Vector3f(
