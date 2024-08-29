@@ -21,7 +21,7 @@ import javax.swing.JPanel;
 
 public class Window extends JPanel {
 
-    private BufferedImage image;
+    private BufferedImage frontBuffer, backBuffer;
     private final JFrame frame;
     private Dimension s;
     private int w, h;
@@ -29,6 +29,7 @@ public class Window extends JPanel {
 
     /**
      * Creates a window
+     *
      * @param name The name of the frame
      */
     public Window(String name) {
@@ -37,29 +38,32 @@ public class Window extends JPanel {
 
     /**
      * Adds a Component to the JFrame
+     *
      * @param comp The component to add
      */
     public void addComponent(Component comp) {
         frame.add(comp);
     }
-    
+
     public void setIcon(BufferedImage icon) {
         frame.setIconImage(icon);
     }
-    
+
     public void setPosition(int x, int y) {
-        frame.setLocation(x,y);
+        frame.setLocation(x, y);
     }
 
     /**
      * Creates and initialises a frame.
-     * 
+     *
      * @param width The width of the frame.
      * @param height The height of the frame.
      * @param title Set the title bar visible.
-     * @param exitOnClose Set if the program should exit when the frame is closed.
+     * @param exitOnClose Set if the program should exit when the frame is
+     * closed.
      * @param fullscreen Set fullscreen mode.
-     * @param opacity Set opacity of the frame. Note: only works if the frame dossen't have a title bar.
+     * @param opacity Set opacity of the frame. Note: only works if the frame
+     * dossen't have a title bar.
      */
     public void createFrame(int width, int height, boolean title, boolean exitOnClose, boolean fullscreen, float opacity) {
         w = width;
@@ -70,7 +74,8 @@ public class Window extends JPanel {
             w = s.width;
             h = s.height;
         }
-        image = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        frontBuffer = gfxConfig.createCompatibleImage(w, h);
+        backBuffer = gfxConfig.createCompatibleImage(w, h);
         Dimension d = new Dimension(width, height);
         frame.setSize(d);
         frame.setPreferredSize(d);
@@ -90,7 +95,7 @@ public class Window extends JPanel {
             public void mousePressed(MouseEvent e) {
                 mouseDown(e);
             }
-            
+
             @Override
             public void mouseReleased(MouseEvent e) {
                 mouseRelease(e);
@@ -101,6 +106,7 @@ public class Window extends JPanel {
             public void mouseMoved(MouseEvent e) {
                 move(e);
             }
+
             @Override
             public void mouseDragged(MouseEvent e) {
                 drag(e);
@@ -131,12 +137,15 @@ public class Window extends JPanel {
      * Render the content from draw().
      */
     public void render() {
-        BufferedImage buffer = gfxConfig.createCompatibleImage(w, h);
-        Graphics2D g = buffer.createGraphics();
+        Graphics2D g = backBuffer.createGraphics();
         g.setColor(Color.BLACK);
         g.fillRect(0, 0, w, h);
         draw(g, w, h);
-        image = buffer;
+        
+        // Swap Buffers
+        BufferedImage tmp = frontBuffer;
+        frontBuffer = backBuffer;
+        backBuffer = tmp;
         g.dispose();
         repaint();
     }
@@ -146,25 +155,25 @@ public class Window extends JPanel {
 
     public void mouseDown(MouseEvent e) {
     }
-    
+
     public void mouseRelease(MouseEvent e) {
     }
 
     public void move(MouseEvent e) {
     }
-    
+
     public void drag(MouseEvent e) {
     }
-    
+
     public void scroll(MouseWheelEvent e) {
     }
-    
+
     public void keyType(KeyEvent e) {
     }
 
     public void keyPress(KeyEvent e) {
     }
-    
+
     public void keyRelease(KeyEvent e) {
     }
 
@@ -172,11 +181,15 @@ public class Window extends JPanel {
         return s;
     }
 
+    public BufferedImage getRender() {
+        return this.frontBuffer;
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (image != null) {
-            g.drawImage(image, 0, 0, this);
+        if (frontBuffer != null) {
+            g.drawImage(frontBuffer, 0, 0, this);
         }
     }
 }
