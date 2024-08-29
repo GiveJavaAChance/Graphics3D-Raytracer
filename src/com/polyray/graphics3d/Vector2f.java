@@ -1,5 +1,7 @@
 package com.polyray.graphics3d;
 
+import java.util.Objects;
+
 public class Vector2f {
 
     public float x;
@@ -75,7 +77,8 @@ public class Vector2f {
 
     @Deprecated
     /**
-     * Use {@Code intersectOnLines} that is more reliable and more performant instead
+     * Use {@Code intersectOnLines} that is more reliable and more performant
+     * instead
      */
     public static Vector2f intersect(Vector2f a1, Vector2f b1, Vector2f a2, Vector2f b2) {
         boolean i1 = a1.x == b1.x;
@@ -126,7 +129,8 @@ public class Vector2f {
 
     @Deprecated
     /**
-     * Use {@Code getPositionOnPlane} that is more accurate, precise and gives negative positions as well
+     * Use {@Code getPositionOnPlane} that is more accurate, precise and gives
+     * negative positions as well
      */
     public static Vector2f getPositionRelativeTo(Vector2f a, Vector2f b, Vector2f pos) {
         float slope1 = getSlope(a, b);
@@ -149,17 +153,25 @@ public class Vector2f {
         }
         return new Vector2f(X, Y);
     }
-    
-    public static Vector2f getPositionOnPlane(Vector2f xDir,Vector2f yDir, Vector2f pos) {
-        float X = dot(pos,xDir);
-        float Y = dot(pos,yDir);
-        return new Vector2f(X,Y);
+
+    public static Vector2f getPositionOnPlane(Vector2f xDir, Vector2f yDir, Vector2f pos) {
+        float X = dot(pos, xDir);
+        float Y = dot(pos, yDir);
+        return new Vector2f(X, Y);
     }
-    
+
     public static Vector2f getPositionOnPlane(Vector2f yDir, Vector2f pos) {
-        float X = dot(pos,new Vector2f(yDir.y,-yDir.x));
-        float Y = dot(pos,yDir);
-        return new Vector2f(X,Y);
+        float X = dot(pos, new Vector2f(yDir.y, -yDir.x));
+        float Y = dot(pos, yDir);
+        return new Vector2f(X, Y);
+    }
+
+    public static Vector2f rotate(Vector2f v, float theta) {
+        float c = (float) Math.cos(theta);
+        float s = (float) Math.sin(theta);
+        float newX = (float) (v.x * c - v.y * s);
+        float newY = (float) (v.x * s + v.y * c);
+        return new Vector2f(newX, newY);
     }
 
     @Override
@@ -167,4 +179,22 @@ public class Vector2f {
         return "Vector2f: (" + this.x + ", " + this.y + ")";
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null) {
+            return false;
+        }
+        if (o instanceof Vector2f v) {
+            return !(v.x != this.x || v.y != this.y);
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.x, this.y);
+    }
 }
