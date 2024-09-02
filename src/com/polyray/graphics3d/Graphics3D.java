@@ -355,27 +355,27 @@ public class Graphics3D {
                     }
                     if (!z1) {
                         if (z0 && !z2) {  // If right neighbour is inside -> move towards it
-                            Vector2f p = tryProject(v1, v0, false);
+                            Vector2f p = tryProject(v1, v0);
                             if (p != null) {
                                 projected.add(p);
                             }
                         } else if (!z0 && z2) {  // If left neighbour is inside -> move towards it
-                            Vector2f p = tryProject(v1, v2, false);
+                            Vector2f p = tryProject(v1, v2);
                             if (p != null) {
                                 projected.add(p);
                             }
                         } else if (z0 && z2) { // If both neighbours are inside -> :
                             if (!prevZ1) { // If the previous "current" was outside -> move to the left neighbour
-                                Vector2f p = tryProject(v1, v0, false);
+                                Vector2f p = tryProject(v1, v0);
                                 if (p != null) {
                                     projected.add(p);
                                 }
                             } else { // If the previus "current" was inside -> split up to 2 points and move towards each neighbour
-                                Vector2f p0 = tryProject(v1, v0, false);
+                                Vector2f p0 = tryProject(v1, v0);
                                 if (p0 != null) {
                                     projected.add(p0);
                                 }
-                                Vector2f p1 = tryProject(v1, v2, false);
+                                Vector2f p1 = tryProject(v1, v2);
                                 if (p1 != null) {
                                     projected.add(p1);
                                 }
@@ -534,43 +534,25 @@ public class Graphics3D {
         g.setPaint(paint);
     }
 
-    private Vector2f tryProject(Vector3f pos, Vector3f to, boolean single) {
+    private Vector2f tryProject(Vector3f pos, Vector3f to) {
         float t = preCameraDepthZ - pos.z;
-        Vector2f vec = null;
-        if (single) {
-            if (t > minRendDist) {
-                try {
-                    vec = project2D(pos);
-                } catch (ProjectionException ex) {
-                }
-            }
-        } else {
-            if (t <= minRendDist && preCameraDepthZ - to.z <= minRendDist) {
+        if (t < minRendDist) {
+            if (preCameraDepthZ - to.z < minRendDist) {
                 return null;
             }
-            /*Vector3f delta = Vector3f.sub(pos, prev);
-            int maxIter = 100;
-            delta = Vector3f.div(delta, maxIter);
-            int iter = 0;
-            while ((cameraDist - (pos.z + cameraZ)) <= minRendDist && iter < maxIter) {
-                pos = Vector3f.sub(pos, delta);
-                iter++;
-            }
-            if (iter != maxIter) {
-                vec = (Vector2f) project2D(pos);
-            }*/
-            if (t < minRendDist) {
-                Vector3f delta = Vector3f.sub(pos, to);
-                delta = Vector3f.div(delta, delta.z);
-                float k = -t + minRendDist + 0.1f;
-                pos = Vector3f.sub(pos, Vector3f.mul(delta, k));
-            }
+            Vector3f delta = Vector3f.sub(pos, to);
+            delta = Vector3f.div(delta, delta.z);
+            float k = minRendDist - t;
             try {
-                vec = project2D(pos);
-            } catch (ProjectionException ex) {
+                return project2D(Vector3f.sub(pos, Vector3f.mul(delta, k)));
+            } catch (ProjectionException e) {
             }
         }
-        return vec;
+        try {
+            return project2D(pos);
+        } catch (ProjectionException e) {
+        }
+        return null;
     }
 
     private Vector2f tryBounds(Vector3f pos, Vector3f to) {
@@ -937,16 +919,13 @@ public class Graphics3D {
 
     private Vector2f project2D(Vector3f v) throws ProjectionException {
         float t = preCameraDepthZ - v.z;
-        if (t > minRendDist) {
+        if (t > 0.001f) {
             float x1 = ((cameraDist * v.x) / t) - cameraX;
             float y1 = ((cameraDist * v.y) / t) - cameraY;
             return new Vector2f(x1, y1);
         } else {
             String errorMessage = "Could not project with t = " + t
-                    + " for position " + v.toString()
-                    + ". Camera parameters: cameraDist=" + cameraDist
-                    + ", cameraZ=" + cameraZ
-                    + ". minRendDist=" + minRendDist;
+                    + " for position " + v.toString();
             throw new ProjectionException(errorMessage);
         }
     }

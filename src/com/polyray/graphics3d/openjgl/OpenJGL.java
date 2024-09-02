@@ -209,21 +209,22 @@ public class OpenJGL {
 
     private Vector3f tryProject(Vector3f pos, Vector3f to) {
         float t = preCameraDepthZ - pos.z;
-        if (t <= minRendDist && preCameraDepthZ - to.z <= minRendDist) {
-            return null;
-        }
         if (t < minRendDist) {
+            if(preCameraDepthZ - to.z < minRendDist) {
+                return null;
+            }
             Vector3f delta = Vector3f.sub(pos, to);
             delta = Vector3f.div(delta, delta.z);
-            float k = -t + minRendDist + 0.01f;
+            float k = minRendDist - t;
+            
             return Vector3f.sub(pos, Vector3f.mul(delta, k));
         }
-        return null;
+        return pos;
     }
 
     private Vector3f project2D(Vector3f v) {
         float t = preCameraDepthZ - v.z;
-        if (t > minRendDist) {
+        if (t > 0.001f) {
             t = cameraDist / t;
             float x1 = v.x * t - cameraX;
             float y1 = v.y * t - cameraY;
