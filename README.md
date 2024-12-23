@@ -1,5 +1,5 @@
 # Graphics3D
-Graphics3D isn't just about 3D graphics; it's an ambitious project aimed at significantly enhancing the speed and performance of graphics in java. This project has been in active development for several months, witnessing numerous enhancements and advancements. It's a work in progress, and the development won't stop untill peak performance has been reached.
+Graphics3D isn't just about 3D graphics; it's an ambitious project aimed at significantly enhancing the speed and performance of graphics in java. This project has been in active development for several months, it's a work in progress, and the development won't stop untill peak performance has been reached.
 
 ## The future of Graphics3D
 The future is looking somewhat great, the first working prototype of a highly optimized 3D renderer has just been released. Texturemapped or not, this new renderer runs just as fast for both. The performance is almost 3x or better compared to the current Graphics3D.
