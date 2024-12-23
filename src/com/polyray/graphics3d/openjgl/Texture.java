@@ -17,7 +17,6 @@ public class Texture {
         } else if(V >= textureHeight) {
             V = textureHeight - 1;
         }
-        int idx = U + V * textureWidth;
-        return texture[idx];
+        return texture[U + V * textureWidth];
     }
 }
