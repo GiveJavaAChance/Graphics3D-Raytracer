@@ -46,16 +46,14 @@ public class Example {
       };
       // Example, create a 600 by 400 pixel frame without title bar:
       w.createFrame(600, 400, false, true, false, 1.0f);
-
-      new Thread(() -> {
-        while(true) {
-          w.render(); // Invokes the draw method
-          try {
-            Thread.sleep(17); // Adjust for desired FPS (approximately 60fps)
-          } catch (InterruptedException ex) {
-          }
+      while(w.isDisplayable()) {
+        long startTime = System.nanoTime();
+        w.render(); // Invokes the draw method
+        try {
+          Thread.sleep((int) Math.max(17.0f - (System.nanoTime() - startTime) / 1000000.0f, 0.0f));
+        } catch (InterruptedException ex) {
         }
-      }).start();
+      }
     }
 
     public static void main(String[] args) {
@@ -95,15 +93,14 @@ public class Example {
         }
       };
       w.createFrame(600, 400, false, true, false, 1.0f);
-      new Thread(() -> {
-        while(true) {
-          w.render();
-          try {
-            Thread.sleep(17); // Adjust for desired FPS (approximately 60fps)
-          } catch (InterruptedException ex) {
-          }
+      while(w.isDisplayable()) {
+        long startTime = System.nanoTime();
+        w.render();
+        try {
+          Thread.sleep((int) Math.max(17.0f - (System.nanoTime() - startTime) / 1000000.0f, 0.0f));
+        } catch (InterruptedException ex) {
         }
-      }).start();
+      }
     }
 
     public static void main(String[] args) {
