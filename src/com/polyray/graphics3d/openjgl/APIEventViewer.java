@@ -23,13 +23,17 @@ public class APIEventViewer {
     private int[] pixels;
     private int he;
     private long timePassed = 0l;
+    private int stepSize;
+    private float depthMul;
 
-    public APIEventViewer(ArrayList<APIEvent> events, int width, int height) {
+    public APIEventViewer(ArrayList<APIEvent> events, Renderer r, int stepSize, float depthMul) {
         this.events = events;
-        this.r = new Renderer(width, height);
-        this.depthTexture = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        this.r = r;
+        this.depthTexture = new BufferedImage(r.width, r.height, BufferedImage.TYPE_INT_ARGB);
         this.pixels = ((DataBufferInt) depthTexture.getRaster().getDataBuffer()).getData();
-        this.he = height;
+        this.he = r.height;
+        this.stepSize = stepSize;
+        this.depthMul = depthMul;
         Window w = new Window("") {
             @Override
             public void draw(Graphics2D g, int width, int height) {
@@ -48,14 +52,14 @@ public class APIEventViewer {
             public void keyPress(KeyEvent e) {
                 switch (e.getKeyCode()) {
                     case KeyEvent.VK_LEFT -> {
-                        idx -= e.isControlDown() ? 100 : 1;
+                        idx -= e.isControlDown() ? stepSize : 1;
                         if (idx < 0) {
                             idx = 0;
                         }
                         signalUpdate = true;
                     }
                     case KeyEvent.VK_RIGHT -> {
-                        idx += e.isControlDown() ? 100 : 1;
+                        idx += e.isControlDown() ? stepSize : 1;
                         if (idx >= events.size()) {
                             idx = events.size() - 1;
                         }
@@ -64,7 +68,7 @@ public class APIEventViewer {
                 }
             }
         };
-        w.createFrame(width, height * 2, false, true, true, 1.0f);
+        w.createFrame(r.width, r.height * 2, false, true, true, 1.0f);
         update();
         while (true) {
             long startTime = System.nanoTime();
@@ -110,7 +114,7 @@ public class APIEventViewer {
             pixels[i] = 0xFF000000 | u << 16 | u << 8 | u;
         }*/
         for (int i = 0; i < depthBuffer.length; i++) {
-            float c = 1.0f - Math.max(Math.min(depthBuffer[i] / 1.5f / 255.0f, 1.0f), 0.0f);
+            float c = 1.0f - Math.max(Math.min(depthBuffer[i] * depthMul, 1.0f), 0.0f);
             int u = (int) (255.0f * c);
             pixels[i] = 0xFF000000 | u << 16 | u << 8 | u;
         }
