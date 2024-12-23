@@ -8,6 +8,8 @@ public class Renderer {
 
     public static final int DEPTH_BUFFER_BIT = 1;
     public static final int COLOR_BUFFER_BIT = 2;
+    public static final int NO_BLEND = 3;
+    public static final int ALPHA_BLEND = 4;
 
     private final float[] depthBuffer;
     private final int[] pixels;
@@ -15,12 +17,15 @@ public class Renderer {
     public final int width;
     public final int height;
     private int background = 0xFF000000;
-    
+    private int blendMode = 3;
+
     private long startTime;
 
     private Shader shader = (color, depth) -> {
         return color;
     };
+
+    private OpenJGL u = null;
 
     private ArrayList<APIEvent> apiCalls = new ArrayList<>();
     private boolean doCapture;
@@ -36,8 +41,16 @@ public class Renderer {
         this.pixels = ((DataBufferInt) this.render.getRaster().getDataBuffer()).getData();
     }
 
+    public void set3DContext(OpenJGL u) {
+        this.u = u;
+    }
+
     public void setBackground(int color) {
         this.background = color;
+    }
+
+    public void setBlendMode(int mode) {
+        this.blendMode = mode;
     }
 
     public void setShader(Shader shader) {
@@ -102,8 +115,11 @@ public class Renderer {
         }
     }
 
-    private float lerp(float start, float end, float t) {
-        return start + t * (end - start);
+    private float perp(float start, float end, float t) { // Perspective correct interpolation for depth
+        if (u == null) {
+            return start * end / (end + t * (start - end)) - width / 2.0f;
+        }
+        return start * end / (end + t * (start - end)) - u.minRendDist;
     }
 
     public void fillTriangle(int x0, int y0, float z0, int x1, int y1, float z1, int x2, int y2, float z2, int color) {
@@ -123,6 +139,9 @@ public class Renderer {
             e.z2 = z2;
             e.color = color;
             apiCalls.add(e);
+        }
+        if ((color >>> 24) == 0) {
+            return;
         }
         if (!isVisible(x0, y0, x1, y1, x2, y2)) {
             return; // Triangle is completely outside the viewport
@@ -269,53 +288,89 @@ public class Renderer {
     }
 
     private void fillFlatBottomTriangle(int x0, int y0, float z0, int x1, int y1, float z1, int x2, int y2, float z2, int color) {
-        for (int y = y0; y <= y1; y++) {
-            float t = (float) (y - y0) / (y1 - y0);
-            int startX = (int) lerp(x0, x1, t);
-            int endX = (int) lerp(x0, x2, t);
-            float startZ = lerp(z0, z1, t);
-            float endZ = lerp(z0, z2, t);
+        int dy = y1 - y0;
+        int dx10 = x1 - x0;
+        int dx20 = x2 - x0;
+        float dz10 = z1 - z0;
+        float dz20 = z2 - z0;
+        int sy = Math.max(y0, 0);
+        int ey = Math.min(y1, height - 1);
+        for (int y = sy; y <= ey; y++) {
+            float t = (float) (y - y0) / dy;
+            int startX = (int) (x0 + t * dx10);
+            int endX = (int) (x0 + t * dx20);
+            float startZ = z0 + t * dz10;
+            float endZ = z0 + t * dz20;
             drawScanline(startX, endX, y, startZ, endZ, color);
         }
     }
 
     private void fillFlatTopTriangle(int x0, int y0, float z0, int x1, int y1, float z1, int x2, int y2, float z2, int color) {
-        for (int y = y2; y > y0; y--) {
-            float t = (float) (y - y0) / (y2 - y0);
-            int startX = (int) lerp(x0, x2, t);
-            int endX = (int) lerp(x1, x2, t);
-            float startZ = lerp(z0, z2, t);
-            float endZ = lerp(z1, z2, t);
+        int dy = y2 - y0;
+        int dx20 = x2 - x0;
+        int dx21 = x2 - x1;
+        float dz20 = z2 - z0;
+        float dz21 = z2 - z1;
+        int sy = Math.min(y2, height - 1);
+        int ey = Math.max(y0, 0);
+        for (int y = sy; y > ey; y--) {
+            float t = (float) (y - y0) / dy;
+            int startX = (int) (x0 + t * dx20);
+            int endX = (int) (x1 + t * dx21);
+            float startZ = z0 + t * dz20;
+            float endZ = z1 + t * dz21;
             drawScanline(startX, endX, y, startZ, endZ, color);
         }
     }
 
     private void fillFlatBottomTexturedTriangle(int x0, int y0, float z0, float u0, float v0, int x1, int y1, float z1, float u1, float v1, int x2, int y2, float z2, float u2, float v2, Texture tex) {
-        for (int y = y0; y <= y1; y++) {
-            float t = (float) (y - y0) / (y1 - y0);
-            int startX = (int) lerp(x0, x1, t);
-            int endX = (int) lerp(x0, x2, t);
-            float startZ = lerp(z0, z1, t);
-            float endZ = lerp(z0, z2, t);
-            float startU = lerp(u0, u1, t);
-            float endU = lerp(u0, u2, t);
-            float startV = lerp(v0, v1, t);
-            float endV = lerp(v0, v2, t);
+        int dy = y1 - y0;
+        int dx10 = x1 - x0;
+        int dx20 = x2 - x0;
+        float dz10 = z1 - z0;
+        float dz20 = z2 - z0;
+        float du10 = u1 - u0;
+        float du20 = u2 - u0;
+        float dv10 = v1 - v0;
+        float dv20 = v2 - v0;
+        int sy = Math.max(y0, 0);
+        int ey = Math.min(y1, height - 1);
+        for (int y = sy; y <= ey; y++) {
+            float t = (float) (y - y0) / dy;
+            int startX = (int) (x0 + t * dx10);
+            int endX = (int) (x0 + t * dx20);
+            float startZ = z0 + t * dz10;
+            float endZ = z0 + t * dz20;
+            float startU = u0 + t * du10;
+            float endU = u0 + t * du20;
+            float startV = v0 + t * dv10;
+            float endV = v0 + t * dv20;
             drawTexturedScanline(startX, endX, y, startZ, endZ, startU, endU, startV, endV, tex);
         }
     }
 
     private void fillFlatTopTexturedTriangle(int x0, int y0, float z0, float u0, float v0, int x1, int y1, float z1, float u1, float v1, int x2, int y2, float z2, float u2, float v2, Texture tex) {
-        for (int y = y2; y > y0; y--) {
-            float t = (float) (y - y0) / (y2 - y0);
-            int startX = (int) lerp(x0, x2, t);
-            int endX = (int) lerp(x1, x2, t);
-            float startZ = lerp(z0, z2, t);
-            float endZ = lerp(z1, z2, t);
-            float startU = lerp(u0, u2, t);
-            float endU = lerp(u1, u2, t);
-            float startV = lerp(v0, v2, t);
-            float endV = lerp(v1, v2, t);
+        int dy = y2 - y0;
+        int dx20 = x2 - x0;
+        int dx21 = x2 - x1;
+        float dz20 = z2 - z0;
+        float dz21 = z2 - z1;
+        float du20 = u2 - u0;
+        float du21 = u2 - u1;
+        float dv20 = v2 - v0;
+        float dv21 = v2 - v1;
+        int sy = Math.min(y2, height - 1);
+        int ey = Math.max(y0, 0);
+        for (int y = sy; y > ey; y--) {
+            float t = (float) (y - y0) / dy;
+            int startX = (int) (x0 + t * dx20);
+            int endX = (int) (x1 + t * dx21);
+            float startZ = z0 + t * dz20;
+            float endZ = z1 + t * dz21;
+            float startU = u0 + t * du20;
+            float endU = u1 + t * du21;
+            float startV = v0 + t * dv20;
+            float endV = v1 + t * dv21;
             drawTexturedScanline(startX, endX, y, startZ, endZ, startU, endU, startV, endV, tex);
         }
     }
@@ -348,15 +403,28 @@ public class Renderer {
         int yi = y * width;
         int diff = startX - x1;
         float z = z1 + zStep * diff;
+        if (blendMode == NO_BLEND) {
+            for (int x = startX; x <= endX; x++) {
+                int idx = x + yi;
+                if (z < depthBuffer[idx]) {
+                    depthBuffer[idx] = z;
+                    pixels[idx] = shader.compute(color, z);
+                }
+                z += zStep;
+            }
+            return;
+        }
+        int alpha = color >>> 24;
         for (int x = startX; x <= endX; x++) {
-            if (z < depthBuffer[yi + x]) {
-                depthBuffer[yi + x] = z;
-                /*float c = 1.0f - Math.max(Math.min(z / 1.5f / 255.0f, 1.0f), 0.0f);
-                int r = (int)(((color >> 16) & 0xFF) * c);
-                int g = (int)(((color >> 8) & 0xFF) * c);
-                int b = (int)((color & 0xFF) * c);
-                pixels[yi + x] = 0xFF000000 | r << 16 | g << 8 | b;*/
-                pixels[yi + x] = shader.compute(color, z);
+            int idx = x + yi;
+            if (z < depthBuffer[idx]) {
+                depthBuffer[idx] = z;
+                int newColor = shader.compute(color, z);
+                int srcRGB = newColor & 0x00FFFFFF;
+                int destRGB = pixels[idx] & 0x00FFFFFF;
+                int outRGB = destRGB + ((((srcRGB & 0xFF00FF) - (destRGB & 0xFF00FF)) * alpha) >> 8) & 0xFF00FF;
+                outRGB |= ((destRGB & 0x00FF00) + ((((srcRGB & 0x00FF00) - (destRGB & 0x00FF00)) * alpha) >> 8)) & 0x00FF00;
+                pixels[idx] = (0xFF << 24) | outRGB;
             }
             z += zStep;
         }
@@ -391,16 +459,31 @@ public class Renderer {
         float u = u1 + uStep * diff;
         float v = v1 + vStep * diff;
         int yi = y * width;
+        if (blendMode == NO_BLEND) {
+            for (int x = startX; x <= endX; x++) {
+                int idx = x + yi;
+                if (z < depthBuffer[idx]) {
+                    depthBuffer[idx] = z;
+                    pixels[idx] = shader.compute(tex.getColor(u, v), z);
+                }
+                z += zStep;
+                u += uStep;
+                v += vStep;
+            }
+            return;
+        }
         for (int x = startX; x <= endX; x++) {
-            if (z < depthBuffer[yi + x]) {
-                depthBuffer[yi + x] = z;
-                /*int color = tex.getColor(u, v);
-                float c = 1.0f - Math.max(Math.min(z / 1.5f / 255.0f, 1.0f), 0.0f);
-                int r = (int)(((color >> 16) & 0xFF) * c);
-                int g = (int)(((color >> 8) & 0xFF) * c);
-                int b = (int)((color & 0xFF) * c);
-                pixels[yi + x] = 0xFF000000 | r << 16 | g << 8 | b;*/
-                pixels[yi + x] = shader.compute(tex.getColor(u, v), z);
+            int idx = x + yi;
+            if (z < depthBuffer[idx]) {
+                depthBuffer[idx] = z;
+                int color = tex.getColor(u, v);
+                int newColor = shader.compute(color, z);
+                int alpha = color >>> 24;
+                int srcRGB = newColor & 0x00FFFFFF;
+                int destRGB = pixels[idx] & 0x00FFFFFF;
+                int outRGB = destRGB + ((((srcRGB & 0xFF00FF) - (destRGB & 0xFF00FF)) * alpha) >> 8) & 0xFF00FF;
+                outRGB |= ((destRGB & 0x00FF00) + ((((srcRGB & 0x00FF00) - (destRGB & 0x00FF00)) * alpha) >> 8)) & 0x00FF00;
+                pixels[idx] = (0xFF << 24) | outRGB;
             }
             z += zStep;
             u += uStep;
